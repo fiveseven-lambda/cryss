@@ -74,8 +74,8 @@ impl Inner {
             if c == '"' {
                 if let Some((start, string)) = self.string.take() {
                     // 文字列の終わり．
-                    // 中身を queue に push
-                    queue.push_back((pos::Range::new(start, pos), token::Token::String(string)));
+                    // 次のループで queue に push してもらう
+                    prev = Some((start, State::String(string)));
                     continue;
                 }
             } else {
@@ -169,6 +169,7 @@ impl Inner {
                                         pos::Range::new(start, pos),
                                     ));
                                 }
+                                State::String(string) => token::Token::String(string),
                                 State::Plus => token::Token::Plus,
                                 State::Minus => token::Token::Minus,
                                 State::Asterisk => token::Token::Asterisk,
@@ -295,6 +296,9 @@ enum State {
     /// - `ScientificSign` + [`0`-`9`] -> `Scientific`
     /// - `Scientific` + [`0`-`9`] -> `Scientific`
     Scientific,
+    /// 文字列リテラル．
+    /// ただしオートマトンには含まれない
+    String(String),
     Plus,
     Minus,
     Asterisk,

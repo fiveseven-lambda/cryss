@@ -14,7 +14,7 @@ pub struct Pos {
     byte: usize,
 }
 
-/// ソースコード中でのトークンや式（複数文字／複数行にわたる）の位置を， `start: CharPos` から `end: CharPos` までの半開区間として表す．
+/// ソースコード中でのトークンや式（複数文字／複数行にわたる）の位置を， `start` から `end` までの半開区間として表す．
 #[derive(Clone)]
 pub struct Range {
     start: Pos,
@@ -81,7 +81,7 @@ impl Pos {
 }
 
 use std::ops::Add;
-/// A, B を式やトークンとし，位置がそれぞれ `a: Pos`，`b: Pos` として得られているとする．ソースコード内で B が A より後にあるとき， `a + b` で AB を合わせた範囲が得られる．
+/// A, B を式やトークンとし，位置がそれぞれ `a: Range`，`b: Range` として得られているとする．ソースコード内で B が A より後にあるとき， `a + b` で AB を合わせた範囲が得られる．
 impl Add for Range {
     type Output = Range;
     fn add(self, other: Range) -> Range {
@@ -89,7 +89,7 @@ impl Add for Range {
         Range::new(self.start, other.end)
     }
 }
-/// `a + b` において， `b` が `None` であれば `a` を返す．
+/// `a + b` において， `b` が `None` であれば `a` 自体を返す．
 impl Add<Option<Range>> for Range {
     type Output = Range;
     fn add(self, right: Option<Range>) -> Range {
@@ -99,7 +99,7 @@ impl Add<Option<Range>> for Range {
         }
     }
 }
-/// `a + b` において， `a` が `None` であれば `b` を返す．
+/// `a + b` において， `a` が `None` であれば `b` 自体を返す．
 impl Add<Range> for Option<Range> {
     type Output = Range;
     fn add(self, right: Range) -> Range {
