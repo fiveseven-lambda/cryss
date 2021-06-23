@@ -76,7 +76,7 @@ impl Pos {
     /// エラーが起こっている行を出力．
     pub fn print(&self, log: &Vec<String>) {
         let (line, byte) = self.into_inner();
-        println!("{} !> {}", &log[line][..byte], &log[line][byte..]);
+        println!("{} !-> {}", &log[line][..byte], &log[line][byte..]);
     }
 }
 

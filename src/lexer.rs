@@ -10,9 +10,10 @@ use std::collections::VecDeque;
 /// - 受け取った入力を所有しない．
 /// - トークンを所有しない．
 struct Inner {
+    /// これが空でないなら，ブロックコメントの途中
+    comment: Vec<pos::Pos>,
     /// これが Some なら，文字列リテラルの途中
     string: Option<(pos::Pos, String)>,
-    comment: Vec<pos::Pos>,
 }
 
 impl Inner {
@@ -35,6 +36,10 @@ impl Inner {
     /// トークンが区切れないとき：次の状態を代入する．
     ///
     /// トークンが区切れるとき，新しいトークンが始まるとき：前のトークンを `queue` に push する．
+    ///
+    /// ファイルの末尾以外では，行は必ず \n で終わる（ `std::io::BufRead::read_line` の仕様）．
+    /// ファイルの末尾は \n で終わっていなければならない．
+    /// もしトークンの途中でファイルが終了したらエラーを返す
     fn run(
         &mut self,
         line_num: usize,
@@ -42,7 +47,7 @@ impl Inner {
         queue: &mut VecDeque<(pos::Range, token::Token)>,
     ) -> Result<(), error::Error> {
         let mut iter = line.char_indices().peekable();
-        let mut prev: Option<(pos::Pos, _)> = None;
+        let mut prev = None;
         while let Some((index, c)) = iter.next() {
             let pos = pos::Pos::new(line_num, index);
             if self.comment.len() > 0 {
@@ -134,7 +139,7 @@ impl Inner {
                         (State::Slash, '*') => {
                             // ブロックコメントが，今始まる．
                             // `/` の直前のトークンは push 済み．
-                            self.comment.push(pos);
+                            self.comment.push(start);
                             // prev は今所有権を失っているので，
                             // None を代入しておく．
                             prev = None;
@@ -218,7 +223,11 @@ impl Inner {
                 None => self.begin(pos, c)?,
             };
         }
-        Ok(())
+        if prev.is_some() {
+            Err(error::Error::NoLineFeedAtEOF)
+        } else {
+            Ok(())
+        }
     }
     /// None からの遷移
     fn begin(&mut self, pos: pos::Pos, c: char) -> Result<Option<(pos::Pos, State)>, error::Error> {
@@ -356,7 +365,7 @@ impl<BufRead: std::io::BufRead> Lexer<BufRead> {
     ) -> Result<Option<(pos::Range, token::Token)>, error::Error> {
         loop {
             match self.queue.pop_front() {
-                Some(token) => break Ok(Some(token)),
+                Some(token) => return Ok(Some(token)),
                 None => {
                     let mut line = String::new();
                     if self.prompt {
@@ -376,7 +385,14 @@ impl<BufRead: std::io::BufRead> Lexer<BufRead> {
                         log.push(line);
                         result?;
                     } else {
-                        break Ok(None);
+                        // ファイルの末尾に達した．
+                        return if let Some(pos) = self.inner.comment.pop() {
+                            Err(error::Error::UnterminatedComment(pos))
+                        } else if let Some((pos, _)) = self.inner.string.take() {
+                            Err(error::Error::UnterminatedStringLiteral(pos))
+                        } else {
+                            Ok(None)
+                        };
                     }
                 }
             }
