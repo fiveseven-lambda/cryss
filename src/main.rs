@@ -1,7 +1,9 @@
 //! CReate Your Sound from Scratch
 
+mod compiler;
 mod error;
 mod lexer;
+mod parser;
 mod pos;
 mod program;
 mod sound;
