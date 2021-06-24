@@ -1,1 +1,3 @@
 //! Sound
+
+pub enum Sound {}

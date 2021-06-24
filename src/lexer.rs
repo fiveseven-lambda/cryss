@@ -153,6 +153,9 @@ impl Inner {
                                     "boolean" => token::Token::KeywordBoolean,
                                     "Sound" => token::Token::KeywordSound,
                                     "string" => token::Token::KeywordString,
+                                    "if" => token::Token::KeywordIf,
+                                    "while" => token::Token::KeywordWhile,
+                                    "for" => token::Token::KeywordFor,
                                     s => token::Token::Identifier(s.to_string()),
                                 },
                                 State::Parameter => {
@@ -195,6 +198,7 @@ impl Inner {
                                 State::Colon => token::Token::Colon,
                                 State::Semicolon => token::Token::Semicolon,
                                 State::Comma => token::Token::Comma,
+                                State::Question => token::Token::Question,
                                 State::OpeningParen => token::Token::OpeningParen,
                                 State::ClosingParen => token::Token::ClosingParen,
                                 State::OpeningBracket => token::Token::OpeningBracket,
@@ -257,6 +261,7 @@ impl Inner {
             ';' => State::Semicolon,
             ',' => State::Comma,
             '.' => State::Dot,
+            '?' => State::Question,
             '(' => State::OpeningParen,
             ')' => State::ClosingParen,
             '[' => State::OpeningBracket,
@@ -332,6 +337,7 @@ enum State {
     Comma,
     /// 単独の `.`
     Dot,
+    Question,
     OpeningParen,
     ClosingParen,
     OpeningBracket,

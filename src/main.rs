@@ -1,9 +1,9 @@
 //! CReate Your Sound from Scratch
 
 mod error;
-mod expression;
 mod lexer;
 mod pos;
+mod program;
 mod sound;
 mod syntax;
 mod token;

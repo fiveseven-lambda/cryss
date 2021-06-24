@@ -17,6 +17,13 @@ pub enum Token {
     KeywordSound,
     /// キーワード `string`
     KeywordString,
+    /// キーワード `if`
+    KeywordIf,
+    /// キーワード `while`
+    KeywordWhile,
+    /// キーワード `for`
+    /// `for` 文の syntax は考え中
+    KeywordFor,
     /// `+`: 足し算
     Plus,
     /// `-`: （ 2 項）引き算，（単項）負号
@@ -57,6 +64,8 @@ pub enum Token {
     Semicolon,
     /// `,`
     Comma,
+    /// `?`: 出力
+    Question,
     /// `(`
     OpeningParen,
     /// `)`
