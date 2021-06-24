@@ -37,8 +37,8 @@ impl Inner {
     ///
     /// トークンが区切れるとき，新しいトークンが始まるとき：前のトークンを `queue` に push する．
     ///
-    /// ファイルの末尾以外では，行は必ず \n で終わる（ `std::io::BufRead::read_line` の仕様）．
-    /// ファイルの末尾は \n で終わっていなければならない．
+    /// ファイルの末尾以外では，行は必ず `\n` で終わる（ `std::io::BufRead::read_line` の仕様）．
+    /// ファイルの末尾は `\n` で終わっていなければならない．
     /// もしトークンの途中でファイルが終了したらエラーを返す
     fn run(
         &mut self,
@@ -340,10 +340,14 @@ enum State {
     ClosingBrace,
 }
 
+/// 内部で `Inner::run()` を呼び出す
 pub struct Lexer<BufRead> {
+    /// 標準入力，ファイル入力どちらも可
     reader: BufRead,
+    /// プロンプト文字 `> ` を出力するか否か
     prompt: bool,
     inner: Inner,
+    /// トークンの入っているキュー
     queue: VecDeque<(pos::Range, token::Token)>,
 }
 
@@ -359,6 +363,14 @@ impl<BufRead> Lexer<BufRead> {
 }
 
 impl<BufRead: std::io::BufRead> Lexer<BufRead> {
+    /// 次のトークンを返す．
+    ///
+    /// 必要なだけ次の行を読み，
+    /// 読んだ行は（字句解析が成功したか失敗したかに関わらず）ログに格納する．
+    ///
+    /// - 字句解析に失敗したら，エラーを返す．
+    /// - 字句解析に成功したら， `Option` に包んでトークンを返す
+    ///   （ `None` は，ファイル終端に達し全てのトークンを読み切ったことを意味する）．
     pub fn next(
         &mut self,
         log: &mut Vec<String>,

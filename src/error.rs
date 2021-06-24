@@ -37,7 +37,22 @@ impl Error {
             Error::NoLineFeedAtEOF => {
                 println!("no line feed at end of file");
             }
-            _ => todo!("エラー出力が未実装"),
+            Error::IncompleteScientificNotation(range) => {
+                println!("incomplete scientific notation at {}", range);
+                range.print(log);
+            }
+            Error::SingleAmpersand(range) => {
+                println!("single ampersand at {}", range);
+                range.print(log);
+            }
+            Error::SingleDot(range) => {
+                println!("single dot at {}", range);
+                range.print(log);
+            }
+            Error::ParseFloatError(range, err) => {
+                println!("failed to parse number at {} ({})", range, err);
+                range.print(log);
+            }
         }
     }
 }
