@@ -4,7 +4,18 @@ use crate::pos;
 use std::collections::HashMap;
 
 /// None は空の式を表す
-type Expression = Option<(pos::Range, Node)>;
+pub struct Expression(pub Option<(pos::Range, Node)>);
+impl Expression {
+    pub fn some(range: pos::Range, node: Node) -> Expression {
+        Expression(Some((range, node)))
+    }
+    pub fn empty() -> Expression {
+        Expression(None)
+    }
+    pub fn range(&self) -> Option<pos::Range> {
+        self.0.as_ref().map(|(range, _)| range.clone())
+    }
+}
 
 pub enum Node {
     Identifier(String),
