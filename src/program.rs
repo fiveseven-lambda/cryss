@@ -7,6 +7,13 @@ use crate::sound;
 
 type RcCell<T> = Rc<Cell<T>>;
 
+enum Expression {
+    Real(RealExpression),
+    Boolean(BooleanExpression),
+    Sound(SoundExpression),
+    String(StringExpression),
+}
+
 enum RealExpression {
     Const(f64),
     Reference(RcCell<f64>),

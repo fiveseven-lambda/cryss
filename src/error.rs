@@ -12,6 +12,8 @@ pub enum Error {
     SingleAmpersand(pos::Range),
     SingleDot(pos::Range),
     ParseFloatError(pos::Range, std::num::ParseFloatError),
+    UnclosedParenUntil(pos::Range, Option<pos::Range>),
+    ArgumentNameNotIdentifier(Option<pos::Range>, pos::Range),
 }
 
 impl Error {
@@ -52,6 +54,28 @@ impl Error {
             Error::ParseFloatError(range, err) => {
                 println!("failed to parse number at {} ({})", range, err);
                 range.print(log);
+            }
+            Error::UnclosedParenUntil(open, range) => {
+                match range {
+                    Some(range) => {
+                        println!("unexpected token at {}", range);
+                        range.print(log);
+                    }
+                    None => println!("unexpected end of file"),
+                }
+                println!("note: parenthesis opened at {}", open);
+                open.print(log);
+            }
+            Error::ArgumentNameNotIdentifier(range, equal) => {
+                match range {
+                    Some(range) => {
+                        println!("invalid argument name at {}", range);
+                        range.print(log);
+                    }
+                    None => println!("empty argument name"),
+                }
+                println!("note: argument name is needed before `=` at {}", equal);
+                equal.print(log);
             }
         }
     }

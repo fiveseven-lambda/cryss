@@ -13,16 +13,13 @@ mod token;
 fn main() {
     let mut lexer = lexer::Lexer::new(std::io::BufReader::new(std::io::stdin()), true);
     let mut log = Vec::new();
-    loop {
-        match lexer.next(&mut log) {
-            Ok(Some((pos, token))) => {
-                println!("{:?} ({})", token, pos);
-            }
-            Ok(None) => break,
-            Err(err) => {
-                err.print(&log);
-                break;
-            }
+    match parser::parse_expression(&mut lexer, &mut log) {
+        Ok((result, end)) => {
+            println!("{:#?}", result);
+            println!("{:?}", end);
+        }
+        Err(err) => {
+            err.print(&log);
         }
     }
 }

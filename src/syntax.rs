@@ -6,7 +6,7 @@ use std::collections::HashMap;
 /// None は空の式を表す
 pub struct Expression(pub Option<(pos::Range, Node)>);
 impl Expression {
-    pub fn some(range: pos::Range, node: Node) -> Expression {
+    pub fn new(range: pos::Range, node: Node) -> Expression {
         Expression(Some((range, node)))
     }
     pub fn empty() -> Expression {
@@ -15,14 +15,33 @@ impl Expression {
     pub fn range(&self) -> Option<pos::Range> {
         self.0.as_ref().map(|(range, _)| range.clone())
     }
+    pub fn try_into_identifier(self) -> Result<String, Expression> {
+        match self.0 {
+            Some((_, Node::Identifier(name))) => Ok(name),
+            _ => Err(self),
+        }
+    }
+}
+/// デバッグ用　最後には消す
+impl std::fmt::Debug for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match &self.0 {
+            Some((_range, node)) => match f.alternate() {
+                true => write!(f, "{:#?}", node),
+                false => write!(f, "{:?}", node),
+            },
+            None => write!(f, "empty"),
+        }
+    }
 }
 
+#[derive(Debug)]
 pub enum Node {
     Identifier(String),
     Parameter(String),
     Number(f64),
     String(String),
-    Print(Box<Expression>), // 後置 ? 演算子
+    Print(Box<Node>),
     Minus(Box<Expression>),
     Reciprocal(Box<Expression>),
     Not(Box<Expression>),
@@ -40,16 +59,13 @@ pub enum Node {
     NotEqual(Box<Expression>, Box<Expression>),
     And(Box<Expression>, Box<Expression>),
     Or(Box<Expression>, Box<Expression>),
-    Invocation(
-        Box<Expression>,
-        Vec<Expression>,
-        HashMap<String, Expression>,
-    ),
+    Invocation(Box<Node>, Vec<Expression>, HashMap<String, Expression>),
     Lambda(Vec<Argument>, Box<Expression>),
     Group(Box<Expression>),
 }
 
 /// 関数定義における引数
+#[derive(Debug)]
 pub enum Argument {
     Real(String, Option<Expression>),
     Boolean(String, Option<Expression>),
