@@ -1,19 +1,19 @@
 //! トークンを抽象構文木に変換する．
 
 use crate::{error, lexer, pos, syntax, token};
-use syntax::{Expression, Node};
+use syntax::{Expression, Node, Statement};
 use token::Token;
 
 use std::collections::HashMap;
 use std::io::BufRead;
 
 /// パースした式と，その直後のトークン
-type Result<T> = std::result::Result<(T, Option<(pos::Range, Token)>), error::Error>;
+type ResultAndNext<T> = Result<(T, Option<(pos::Range, Token)>), error::Error>;
 
-pub fn parse_factor(
+fn parse_factor(
     lexer: &mut lexer::Lexer<impl BufRead>,
     log: &mut Vec<String>,
-) -> Result<Expression> {
+) -> ResultAndNext<Expression> {
     let (mut range, mut node) = match lexer.next(log)? {
         Some((range, Token::Identifier(name))) => (range, Node::Identifier(name)),
         Some((range, Token::Parameter(name))) => (range, Node::Parameter(name)),
@@ -39,37 +39,44 @@ pub fn parse_factor(
         }
         Some((open, Token::OpeningParen)) => {
             // 括弧でくくられた部分
-            match parse_operator(lexer, log)? {
+            match parse_expression(lexer, log)? {
                 (expression, Some((close, Token::ClosingParen))) => {
                     (open + close, Node::Group(expression.into()))
                 }
                 (_, other) => {
                     let range = other.map(|(range, _)| range);
-                    return Err(error::Error::UnclosedParenUntil(open, range));
+                    return Err(error::Error::UnclosedBracketUntil(open, range));
                 }
             }
         }
+        Some((open, Token::OpeningBracket)) => match parse_list(lexer, log)? {
+            (list, Some((close, Token::ClosingBracket))) => (open + close, Node::Score(list)),
+            (_, other) => {
+                let range = other.map(|(range, _)| range);
+                return Err(error::Error::UnclosedBracketUntil(open, range));
+            }
+        },
         other => return Ok((Expression::empty(), other)),
     };
     loop {
         match lexer.next(log)? {
             Some((open, Token::OpeningParen)) => {
                 // 関数呼び出し
-                let ((vec, map), end) = parse_arguments(lexer, log)?;
+                let ((vec, map), end) = parse_invocation_arguments(lexer, log)?;
                 match end {
                     Some((close, Token::ClosingParen)) => {
+                        node = Node::Invocation(range.clone(), node.into(), vec, map);
                         range = range + close;
-                        node = Node::Invocation(node.into(), vec, map);
                     }
                     other => {
                         let range = other.map(|(range, _)| range);
-                        return Err(error::Error::UnclosedParenUntil(open, range));
+                        return Err(error::Error::UnclosedBracketUntil(open, range));
                     }
                 }
             }
             Some((question, Token::Question)) => {
+                node = Node::Print(range.clone(), node.into());
                 range = range + question;
-                node = Node::Print(node.into());
             }
             other => return Ok((Expression::new(range, node), other)),
         }
@@ -78,10 +85,10 @@ pub fn parse_factor(
 
 macro_rules! def_binary_operator {
     ($prev:ident => $next:ident: $($from:path => $to:expr),* $(,)?) => {
-        pub fn $next(
+        fn $next(
             lexer: &mut lexer::Lexer<impl BufRead>,
             log: &mut Vec<String>,
-        ) -> Result<Expression> {
+        ) -> ResultAndNext<Expression> {
             let mut ret = $prev(lexer, log)?;
             loop {
                 match ret {
@@ -130,19 +137,19 @@ def_binary_operator! {
         Token::ExclamationEqual => Node::NotEqual,
 }
 def_binary_operator! {
-    parse_operator6 => parse_operator:
+    parse_operator6 => parse_expression:
         Token::DoubleAmpersand => Node::And,
         Token::DoubleBar => Node::Or,
 }
 
-pub fn parse_arguments(
+fn parse_invocation_arguments(
     lexer: &mut lexer::Lexer<impl BufRead>,
     log: &mut Vec<String>,
-) -> Result<(Vec<Expression>, HashMap<String, Expression>)> {
+) -> ResultAndNext<(Vec<Expression>, HashMap<String, Expression>)> {
     let mut vec = Vec::new();
     let mut map = HashMap::new();
     loop {
-        let (item, end) = parse_operator(lexer, log)?;
+        let (item, end) = parse_expression(lexer, log)?;
         match end {
             Some((_, Token::Comma)) => vec.push(item),
             Some((equal, Token::Equal)) => {
@@ -152,7 +159,7 @@ pub fn parse_arguments(
                         return Err(error::Error::ArgumentNameNotIdentifier(item.range(), equal))
                     }
                 };
-                let (item, end) = parse_operator(lexer, log)?;
+                let (item, end) = parse_expression(lexer, log)?;
                 map.insert(name, item);
                 if !matches!(end, Some((_, Token::Comma))) {
                     return Ok(((vec, map), end));
@@ -166,9 +173,75 @@ pub fn parse_arguments(
     }
 }
 
-pub fn parse_expression(
+fn parse_list1(
     lexer: &mut lexer::Lexer<impl BufRead>,
     log: &mut Vec<String>,
-) -> Result<Expression> {
-    parse_operator(lexer, log)
+) -> ResultAndNext<Vec<Expression>> {
+    let mut vec = Vec::new();
+    loop {
+        let (item, end) = parse_expression(lexer, log)?;
+        vec.push(item);
+        if !matches!(end, Some((_, Token::Comma))) {
+            return Ok((vec, end));
+        }
+    }
+}
+fn parse_list(
+    lexer: &mut lexer::Lexer<impl BufRead>,
+    log: &mut Vec<String>,
+) -> ResultAndNext<Vec<Vec<Expression>>> {
+    let mut vec = Vec::new();
+    loop {
+        let (item, end) = parse_list1(lexer, log)?;
+        vec.push(item);
+        if !matches!(end, Some((_, Token::Semicolon))) {
+            return Ok((vec, end));
+        }
+    }
+}
+
+pub fn parse_statement_or_token(
+    lexer: &mut lexer::Lexer<impl BufRead>,
+    log: &mut Vec<String>,
+) -> Result<Result<Statement, Option<(pos::Range, Token)>>, error::Error> {
+    match parse_expression(lexer, log)? {
+        (expr, Some((_, Token::Semicolon))) => Ok(Ok(Statement::Expression(expr))),
+        (lhs, Some((_, Token::Equal))) => {
+            let name = match lhs.try_into_identifier() {
+                Ok(name) => name,
+                Err(lhs) => todo!(),
+            };
+            match parse_expression(lexer, log)? {
+                (expr, Some((_, Token::Semicolon))) => Ok(Ok(Statement::Substitution(name, expr))),
+                _ => todo!(),
+            }
+        }
+        (Expression(None), Some((_, Token::OpeningBrace))) => {
+            let mut vec = Vec::new();
+            loop {
+                match parse_statement_or_token(lexer, log)? {
+                    Ok(stmt) => vec.push(stmt),
+                    Err(Some((_, Token::ClosingBrace))) => break Ok(Ok(Statement::Block(vec))),
+                    Err(other) => {
+                        todo!();
+                    }
+                }
+            }
+        }
+        (Expression(None), Some((_, Token::KeywordBreak))) => Ok(Ok(Statement::Break)),
+        (Expression(None), Some((_, Token::KeywordContinue))) => Ok(Ok(Statement::Continue)),
+        (Expression(None), other) => Ok(Err(other)),
+        (Expression(Some((range, _))), _) => Err(error::Error::NoSemicolonAtEndOfStatement(range)),
+    }
+}
+
+pub fn parse_statement(
+    lexer: &mut lexer::Lexer<impl BufRead>,
+    log: &mut Vec<String>,
+) -> Result<Option<Statement>, error::Error> {
+    match parse_statement_or_token(lexer, log)? {
+        Ok(statement) => Ok(Some(statement)),
+        Err(None) => Ok(None),
+        Err(Some((range, _))) => Err(error::Error::UnexpectedToken(range)),
+    }
 }

@@ -12,8 +12,14 @@ pub enum Error {
     SingleAmpersand(pos::Range),
     SingleDot(pos::Range),
     ParseFloatError(pos::Range, std::num::ParseFloatError),
-    UnclosedParenUntil(pos::Range, Option<pos::Range>),
+    UnclosedBracketUntil(pos::Range, Option<pos::Range>),
     ArgumentNameNotIdentifier(Option<pos::Range>, pos::Range),
+    VariableNotFound(String, pos::Range),
+    CannotPrint(pos::Range),
+    EmptyOperandMinus(pos::Range),
+    TypeMismatchMinus(pos::Range),
+    NoSemicolonAtEndOfStatement(pos::Range),
+    UnexpectedToken(pos::Range),
 }
 
 impl Error {
@@ -55,7 +61,7 @@ impl Error {
                 println!("failed to parse number at {} ({})", range, err);
                 range.print(log);
             }
-            Error::UnclosedParenUntil(open, range) => {
+            Error::UnclosedBracketUntil(open, range) => {
                 match range {
                     Some(range) => {
                         println!("unexpected token at {}", range);
@@ -63,7 +69,7 @@ impl Error {
                     }
                     None => println!("unexpected end of file"),
                 }
-                println!("note: parenthesis opened at {}", open);
+                println!("note: bracket opened at {}", open);
                 open.print(log);
             }
             Error::ArgumentNameNotIdentifier(range, equal) => {
@@ -76,6 +82,30 @@ impl Error {
                 }
                 println!("note: argument name is needed before `=` at {}", equal);
                 equal.print(log);
+            }
+            Error::VariableNotFound(name, range) => {
+                println!("variable {} not found at {}", name, range);
+                range.print(log);
+            }
+            Error::CannotPrint(range) => {
+                println!("cannot apply `?` (at {})", range);
+                range.print(log);
+            }
+            Error::EmptyOperandMinus(range) => {
+                println!("empty operand of minus (at {})", range);
+                range.print(log);
+            }
+            Error::TypeMismatchMinus(range) => {
+                println!("type mismatch at {}. Minus expected real", range);
+                range.print(log);
+            }
+            Error::NoSemicolonAtEndOfStatement(range) => {
+                println!("no semicolon at end of statement ({})", range);
+                range.print(log);
+            }
+            Error::UnexpectedToken(range) => {
+                println!("unexpected token at {}", range);
+                range.print(log);
             }
         }
     }

@@ -41,7 +41,7 @@ pub enum Node {
     Parameter(String),
     Number(f64),
     String(String),
-    Print(Box<Node>),
+    Print(pos::Range, Box<Node>),
     Minus(Box<Expression>),
     Reciprocal(Box<Expression>),
     Not(Box<Expression>),
@@ -59,26 +59,24 @@ pub enum Node {
     NotEqual(Box<Expression>, Box<Expression>),
     And(Box<Expression>, Box<Expression>),
     Or(Box<Expression>, Box<Expression>),
-    Invocation(Box<Node>, Vec<Expression>, HashMap<String, Expression>),
-    Lambda(Vec<Argument>, Box<Expression>),
+    Invocation(
+        pos::Range,
+        Box<Node>,
+        Vec<Expression>,
+        HashMap<String, Expression>,
+    ),
     Group(Box<Expression>),
+    Score(Vec<Vec<Expression>>),
 }
 
-/// 関数定義における引数
 #[derive(Debug)]
-pub enum Argument {
-    Real(String, Option<Expression>),
-    Boolean(String, Option<Expression>),
-    Sound(String, Option<Expression>),
-    String(String, Option<Expression>),
-}
-
 pub enum Statement {
     Expression(Expression),
     Substitution(String, Expression),
     Declaration(String, Expression),
-    While(Expression, Vec<Statement>),
-    If(Expression, Vec<Statement>),
+    Block(Vec<Statement>),
+    While(Expression, Box<Statement>),
+    If(Expression, Box<Statement>),
     Break,
     Continue,
 }

@@ -1,20 +1,27 @@
 //! 型チェックを済ませた式木
 
 use std::cell::Cell;
+use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::sound;
+use crate::{sound, value};
 
 type RcCell<T> = Rc<Cell<T>>;
 
-enum Expression {
+pub enum Expression {
     Real(RealExpression),
     Boolean(BooleanExpression),
     Sound(SoundExpression),
     String(StringExpression),
+    Void(VoidExpression),
+    RealFunction(RealFunction),
+    BooleanFunction(BooleanFunction),
+    SoundFunction(SoundFunction),
+    StringFunction(StringFunction),
+    VoidFunction(VoidFunction),
 }
 
-enum RealExpression {
+pub enum RealExpression {
     Const(f64),
     Reference(RcCell<f64>),
     Print(Box<RealExpression>),
@@ -26,9 +33,10 @@ enum RealExpression {
     Div(Box<RealExpression>, Box<RealExpression>),
     Rem(Box<RealExpression>, Box<RealExpression>),
     Pow(Box<RealExpression>, Box<RealExpression>),
+    Invocation(),
 }
 
-enum BooleanExpression {
+pub enum BooleanExpression {
     Const(bool),
     Reference(RcCell<bool>),
     Print(Box<BooleanExpression>),
@@ -43,9 +51,10 @@ enum BooleanExpression {
     Or(Box<BooleanExpression>, Box<BooleanExpression>),
 }
 
-enum SoundExpression {
+pub enum SoundExpression {
     Const(sound::Sound),
     Reference(RcCell<sound::Sound>),
+    Play(Box<SoundExpression>),
     Real(Box<RealExpression>),
     Add(Box<SoundExpression>, Box<SoundExpression>),
     Sub(Box<SoundExpression>, Box<SoundExpression>),
@@ -57,47 +66,52 @@ enum SoundExpression {
     RightShift(Box<SoundExpression>, Box<RealExpression>),
 }
 
-enum StringExpression {
+pub enum StringExpression {
     Const(String),
-    Reference(RcCell<StringExpression>),
+    Reference(RcCell<String>),
     Print(Box<StringExpression>),
     Add(Box<StringExpression>),
 }
 
-enum VoidExpression {}
+pub enum VoidExpression {}
 
-enum Statement {
+// 関数の扱い方．
+// まず，引数を格納する場所は RcCell<T> として持っておく．
+// 関数の中身は文の並びとして持つ．
+//
+// ループが無いとき：各文を実行すると
+// RealFunction なら `Some(f64)`
+// BooleanFunction なら `Some(bool)`…
+// が返る．
+
+// 関数の呼び出し方．
+// 中身は必ず Rc で包まれている
+// 引数
+
+pub enum RealFunctionStatement {
     RealExpression(RealExpression),
     RealSubstitution(RcCell<f64>, RealExpression),
-    RealDeclaration(String, RealExpression),
     BooleanExpression(BooleanExpression),
     BooleanSubstitution(RcCell<bool>, BooleanExpression),
-    BooleanDeclaration(String, BooleanExpression),
     SoundExpression(SoundExpression),
     SoundSubstitution(RcCell<sound::Sound>, SoundExpression),
-    SoundDeclaration(String, SoundExpression),
     StringExpression(StringExpression),
     StringSubstitution(RcCell<String>, StringExpression),
-    StringDeclaration(String, StringExpression),
-    If(BooleanExpression, Vec<Statement>),
-    While(BooleanExpression, Vec<LoopStatement>),
+    Return(RealExpression),
 }
 
-enum LoopStatement {
-    RealExpression(RealExpression),
-    RealSubstitution(RcCell<f64>, RealExpression),
-    RealDeclaration(String, RealExpression),
-    BooleanExpression(BooleanExpression),
-    BooleanSubstitution(RcCell<bool>, BooleanExpression),
-    BooleanDeclaration(String, BooleanExpression),
-    SoundExpression(SoundExpression),
-    SoundSubstitution(RcCell<sound::Sound>, SoundExpression),
-    SoundDeclaration(String, SoundExpression),
-    StringExpression(StringExpression),
-    StringSubstitution(RcCell<String>, StringExpression),
-    StringDeclaration(String, StringExpression),
-    If(BooleanExpression, Vec<LoopStatement>),
-    While(BooleanExpression, Vec<LoopStatement>),
-    Break,
-    Continue,
+pub enum RealFunction {
+    Const(value::RealFunction),
+}
+pub enum BooleanFunction {
+    Const(value::BooleanFunction),
+}
+pub enum StringFunction {
+    Const(value::StringFunction),
+}
+pub enum SoundFunction {
+    Const(value::SoundFunction),
+}
+pub enum VoidFunction {
+    Const(value::VoidFunction),
 }

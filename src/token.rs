@@ -17,6 +17,10 @@ pub enum Token {
     KeywordSound,
     /// キーワード `string`
     KeywordString,
+    KeywordFnc,
+    KeywordLet,
+    KeywordBreak,
+    KeywordContinue,
     /// キーワード `if`
     KeywordIf,
     /// キーワード `while`

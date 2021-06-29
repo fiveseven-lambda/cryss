@@ -156,6 +156,10 @@ impl Inner {
                                     "if" => token::Token::KeywordIf,
                                     "while" => token::Token::KeywordWhile,
                                     "for" => token::Token::KeywordFor,
+                                    "fnc" => token::Token::KeywordFnc,
+                                    "let" => token::Token::KeywordLet,
+                                    "break" => token::Token::KeywordBreak,
+                                    "continue" => token::Token::KeywordContinue,
                                     s => token::Token::Identifier(s.to_string()),
                                 },
                                 State::Parameter => {
