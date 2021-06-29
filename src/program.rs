@@ -77,6 +77,41 @@ pub enum StringExpression {
 
 pub enum VoidExpression {}
 
+pub trait TypeExpression {
+    type Output;
+    fn evaluate(&self) -> Self::Output;
+}
+impl TypeExpression for RealExpression {
+    type Output = f64;
+    fn evaluate(&self) -> f64 {
+        todo!();
+    }
+}
+impl TypeExpression for BooleanExpression {
+    type Output = bool;
+    fn evaluate(&self) -> bool {
+        todo!();
+    }
+}
+impl TypeExpression for SoundExpression {
+    type Output = sound::Sound;
+    fn evaluate(&self) -> sound::Sound {
+        todo!();
+    }
+}
+impl TypeExpression for StringExpression {
+    type Output = String;
+    fn evaluate(&self) -> String {
+        todo!();
+    }
+}
+impl TypeExpression for VoidExpression {
+    type Output = ();
+    fn evaluate(&self) {
+        todo!();
+    }
+}
+
 // 関数の扱い方．
 // まず，引数を格納する場所は RcCell<T> として持っておく．
 // 関数の中身は文の並びとして持つ．
@@ -98,23 +133,7 @@ pub enum Statement {
     StringSubstitution(RcCell<String>, StringExpression),
 }
 
-pub enum RealFunctionStatement {
+pub enum FunctionStatement<T: TypeExpression> {
     Statement(Statement),
-    Return(RealExpression),
-}
-pub enum BooleanFunctionStatement {
-    Statement(Statement),
-    Return(BooleanExpression),
-}
-pub enum SoundFunctionStatement {
-    Statement(Statement),
-    Return(SoundExpression),
-}
-pub enum StringFunctionStatement {
-    Statement(Statement),
-    Return(StringExpression),
-}
-pub enum VoidFunctionStatement {
-    Statement(Statement),
-    Return,
+    Return(T),
 }

@@ -61,17 +61,32 @@ pub struct VoidFunction {
 
 pub enum RealFunctionDefinition {
     Primitive1(Box<fn(f64) -> f64>, RcCell<f64>),
-    UserDefined(Vec<program::RealFunctionStatement>, Vec<Value>),
+    UserDefined(
+        Vec<program::FunctionStatement<program::RealExpression>>,
+        Vec<Value>,
+    ),
 }
 pub enum BooleanFunctionDefinition {
-    UserDefined(Vec<program::BooleanFunctionStatement>, Vec<Value>),
+    UserDefined(
+        Vec<program::FunctionStatement<program::BooleanExpression>>,
+        Vec<Value>,
+    ),
 }
 pub enum StringFunctionDefinition {
-    UserDefined(Vec<program::StringFunctionStatement>, Vec<Value>),
+    UserDefined(
+        Vec<program::FunctionStatement<program::StringExpression>>,
+        Vec<Value>,
+    ),
 }
 pub enum SoundFunctionDefinition {
-    UserDefined(Vec<program::SoundFunctionStatement>, Vec<Value>),
+    UserDefined(
+        Vec<program::FunctionStatement<program::SoundExpression>>,
+        Vec<Value>,
+    ),
 }
 pub enum VoidFunctionDefinition {
-    UserDefined(Vec<program::VoidFunctionStatement>, Vec<Value>),
+    UserDefined(
+        Vec<program::FunctionStatement<program::VoidExpression>>,
+        Vec<Value>,
+    ),
 }
