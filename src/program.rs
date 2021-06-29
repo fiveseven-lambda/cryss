@@ -14,11 +14,11 @@ pub enum Expression {
     Sound(SoundExpression),
     String(StringExpression),
     Void(VoidExpression),
-    RealFunction(RealFunction),
-    BooleanFunction(BooleanFunction),
-    SoundFunction(SoundFunction),
-    StringFunction(StringFunction),
-    VoidFunction(VoidFunction),
+    RealFunction(value::RealFunction),
+    BooleanFunction(value::BooleanFunction),
+    SoundFunction(value::SoundFunction),
+    StringFunction(value::StringFunction),
+    VoidFunction(value::VoidFunction),
 }
 
 pub enum RealExpression {
@@ -56,6 +56,8 @@ pub enum SoundExpression {
     Reference(RcCell<sound::Sound>),
     Play(Box<SoundExpression>),
     Real(Box<RealExpression>),
+    Minus(Box<SoundExpression>),
+    Reciprocal(Box<SoundExpression>),
     Add(Box<SoundExpression>, Box<SoundExpression>),
     Sub(Box<SoundExpression>, Box<SoundExpression>),
     Mul(Box<SoundExpression>, Box<SoundExpression>),
@@ -88,30 +90,31 @@ pub enum VoidExpression {}
 // 中身は必ず Rc で包まれている
 // 引数
 
-pub enum RealFunctionStatement {
-    RealExpression(RealExpression),
+pub enum Statement {
+    Expression(Option<Expression>),
     RealSubstitution(RcCell<f64>, RealExpression),
-    BooleanExpression(BooleanExpression),
     BooleanSubstitution(RcCell<bool>, BooleanExpression),
-    SoundExpression(SoundExpression),
     SoundSubstitution(RcCell<sound::Sound>, SoundExpression),
-    StringExpression(StringExpression),
     StringSubstitution(RcCell<String>, StringExpression),
-    Return(RealExpression),
 }
 
-pub enum RealFunction {
-    Const(value::RealFunction),
+pub enum RealFunctionStatement {
+    Statement(Statement),
+    Return(RealExpression),
 }
-pub enum BooleanFunction {
-    Const(value::BooleanFunction),
+pub enum BooleanFunctionStatement {
+    Statement(Statement),
+    Return(BooleanExpression),
 }
-pub enum StringFunction {
-    Const(value::StringFunction),
+pub enum SoundFunctionStatement {
+    Statement(Statement),
+    Return(SoundExpression),
 }
-pub enum SoundFunction {
-    Const(value::SoundFunction),
+pub enum StringFunctionStatement {
+    Statement(Statement),
+    Return(StringExpression),
 }
-pub enum VoidFunction {
-    Const(value::VoidFunction),
+pub enum VoidFunctionStatement {
+    Statement(Statement),
+    Return,
 }

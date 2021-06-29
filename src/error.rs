@@ -14,10 +14,12 @@ pub enum Error {
     ParseFloatError(pos::Range, std::num::ParseFloatError),
     UnclosedBracketUntil(pos::Range, Option<pos::Range>),
     ArgumentNameNotIdentifier(Option<pos::Range>, pos::Range),
-    VariableNotFound(String, pos::Range),
+    UndefinedVariable(String, pos::Range),
     CannotPrint(pos::Range),
     EmptyOperandMinus(pos::Range),
     TypeMismatchMinus(pos::Range),
+    EmptyOperandReciprocal(pos::Range),
+    TypeMismatchReciprocal(pos::Range),
     NoSemicolonAtEndOfStatement(pos::Range),
     UnexpectedToken(pos::Range),
 }
@@ -83,8 +85,8 @@ impl Error {
                 println!("note: argument name is needed before `=` at {}", equal);
                 equal.print(log);
             }
-            Error::VariableNotFound(name, range) => {
-                println!("variable {} not found at {}", name, range);
+            Error::UndefinedVariable(name, range) => {
+                println!("undefined variable {} at {}", name, range);
                 range.print(log);
             }
             Error::CannotPrint(range) => {
@@ -92,11 +94,19 @@ impl Error {
                 range.print(log);
             }
             Error::EmptyOperandMinus(range) => {
-                println!("empty operand of minus (at {})", range);
+                println!("empty operand of `-` (at {})", range);
                 range.print(log);
             }
             Error::TypeMismatchMinus(range) => {
-                println!("type mismatch at {}. Minus expected real", range);
+                println!("type mismatch at {}. `-` expected real", range);
+                range.print(log);
+            }
+            Error::EmptyOperandReciprocal(range) => {
+                println!("empty operand of `/` (at {})", range);
+                range.print(log);
+            }
+            Error::TypeMismatchReciprocal(range) => {
+                println!("type mismatch at {}. `/` expected real", range);
                 range.print(log);
             }
             Error::NoSemicolonAtEndOfStatement(range) => {
