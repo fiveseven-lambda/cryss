@@ -21,6 +21,21 @@ pub enum Expression {
     VoidFunction(value::VoidFunction),
 }
 
+/// デバッグ用：後で消す
+impl std::fmt::Debug for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Expression::Real(expr) => write!(f, "{:?}", expr),
+            Expression::Boolean(expr) => write!(f, "{:?}", expr),
+            Expression::Sound(expr) => write!(f, "{:?}", expr),
+            Expression::String(_) => write!(f, "string"),
+            Expression::Void(_) => write!(f, "void"),
+            _ => write!(f, "function"),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum RealExpression {
     Const(f64),
     Reference(RcCell<f64>),
@@ -51,11 +66,34 @@ pub enum BooleanExpression {
     Or(Box<BooleanExpression>, Box<BooleanExpression>),
 }
 
+impl std::fmt::Debug for BooleanExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            BooleanExpression::Const(_) => write!(f, "const"),
+            BooleanExpression::Reference(_) => write!(f, "reference"),
+            BooleanExpression::Print(expr) => write!(f, "({:?})?", expr),
+            BooleanExpression::Not(expr) => write!(f, "-({:?})", expr),
+            BooleanExpression::RealLess(left, right) => write!(f, "({:?}) < ({:?})", left, right),
+            BooleanExpression::RealGreater(left, right) => {
+                write!(f, "({:?}) > ({:?})", left, right)
+            }
+            BooleanExpression::RealEqual(left, right) => write!(f, "({:?}) == ({:?})", left, right),
+            BooleanExpression::StringEqual(_, _) => write!(f, "string == string"),
+            BooleanExpression::RealNotEqual(left, right) => {
+                write!(f, "({:?}) != ({:?})", left, right)
+            }
+            BooleanExpression::StringNotEqual(_, _) => write!(f, "string != string"),
+            BooleanExpression::And(left, right) => write!(f, "({:?}) && ({:?})", left, right),
+            BooleanExpression::Or(left, right) => write!(f, "({:?}) || ({:?})", left, right),
+        }
+    }
+}
+
 pub enum SoundExpression {
     Const(sound::Sound),
     Reference(RcCell<sound::Sound>),
     Play(Box<SoundExpression>),
-    Real(Box<RealExpression>),
+    Real(RealExpression),
     Minus(Box<SoundExpression>),
     Reciprocal(Box<SoundExpression>),
     Add(Box<SoundExpression>, Box<SoundExpression>),
@@ -68,11 +106,32 @@ pub enum SoundExpression {
     RightShift(Box<SoundExpression>, Box<RealExpression>),
 }
 
+impl std::fmt::Debug for SoundExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            SoundExpression::Const(_) => write!(f, "const"),
+            SoundExpression::Reference(_) => write!(f, "reference"),
+            SoundExpression::Play(expr) => write!(f, "({:?})?", expr),
+            SoundExpression::Real(expr) => write!(f, "Real({:?})", expr),
+            SoundExpression::Minus(expr) => write!(f, "-({:?})", expr),
+            SoundExpression::Reciprocal(expr) => write!(f, "/({:?})", expr),
+            SoundExpression::Add(left, right) => write!(f, "({:?}) + ({:?})", left, right),
+            SoundExpression::Sub(left, right) => write!(f, "({:?}) - ({:?})", left, right),
+            SoundExpression::Mul(left, right) => write!(f, "({:?}) * ({:?})", left, right),
+            SoundExpression::Div(left, right) => write!(f, "({:?}) / ({:?})", left, right),
+            SoundExpression::Rem(left, right) => write!(f, "({:?}) % ({:?})", left, right),
+            SoundExpression::Pow(left, right) => write!(f, "({:?}) ^ ({:?})", left, right),
+            SoundExpression::LeftShift(left, right) => write!(f, "({:?}) << ({:?})", left, right),
+            SoundExpression::RightShift(left, right) => write!(f, "({:?}) >> ({:?})", left, right),
+        }
+    }
+}
+
 pub enum StringExpression {
     Const(String),
     Reference(RcCell<String>),
     Print(Box<StringExpression>),
-    Add(Box<StringExpression>),
+    Add(Box<StringExpression>, Box<StringExpression>),
 }
 
 pub enum VoidExpression {}
@@ -133,6 +192,18 @@ pub enum Statement {
     StringSubstitution(RcCell<String>, StringExpression),
 }
 
+impl std::fmt::Debug for Statement {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Statement::Expression(expr) => {
+                write!(f, "{:?}", expr)
+            }
+            _ => {
+                write!(f, "other")
+            }
+        }
+    }
+}
 pub enum FunctionStatement<T: TypeExpression> {
     Statement(Statement),
     Return(T),

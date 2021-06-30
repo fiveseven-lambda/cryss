@@ -1,6 +1,7 @@
 //! CReate Your Sound from Scratch
 
 mod compiler;
+mod environment;
 mod error;
 mod lexer;
 mod parser;
@@ -20,8 +21,15 @@ fn main() {
     loop {
         match parser::parse_statement(&mut lexer, &mut log) {
             Ok(Some(result)) => {
-                println!("{:#?}", result);
-                compiler::compile_statement(result, &mut global);
+                // println!("{:#?}", result);
+                match compiler::compile_statement(result, &mut global) {
+                    Ok(result) => {
+                        println!("{:?}", result);
+                    }
+                    Err(err) => {
+                        err.print(&log);
+                    }
+                }
             }
             Ok(None) => {
                 break;

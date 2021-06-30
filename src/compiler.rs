@@ -29,83 +29,178 @@ use std::rc::Rc;
 // ローカル変数 Vec<Value>
 // そしてこれらは HashMap<String, Value> にも入れておく（コンパイル後は消える）
 
+macro_rules! def_binary_operator_real {
+    ($left:ident, $right:ident, $range:ident, $variables:ident, $expected:expr; $rop:ident; $($lt:path, $rt:path => $ot:ident: $out:ident :: $op:ident);* $(;)?) => {{
+        let (left_range, left) = $left.0.ok_or(error::Error::EmptyOperand($range.clone()))?;
+        let (right_range, right) = $right.0.ok_or(error::Error::EmptyOperand($range.clone()))?;
+        let left = compile_node(&left_range, left, $variables)?;
+        let right = compile_node(&right_range, right, $variables)?;
+        match (left, right) {
+            (Real(left), Real(right)) => Real(RealExpression::$rop(left.into(), right.into())),
+            (Sound(left), Sound(right)) => Sound(SoundExpression::$rop(left.into(), right.into())),
+            (Sound(left), Real(right)) => Sound(SoundExpression::$rop(
+                left.into(),
+                SoundExpression::Real(right).into(),
+            )),
+            (Real(left), Sound(right)) => Sound(SoundExpression::$rop(
+                SoundExpression::Real(left).into(),
+                right.into(),
+            )),
+            $(($lt(left), $rt(right)) => $ot($out::$op(left.into(), right.into())),)*
+            _ => {
+                return Err(error::Error::TypeMismatchBinary(
+                    left_range,
+                    right_range,
+                    $expected
+                ))
+            }
+        }
+    }};
+}
+macro_rules! def_binary_operator {
+    ($left:ident, $right:ident, $range:ident, $variables:ident, $expected:expr; $($lt:path, $rt:path => $ot:ident: $out:ident :: $op:ident);* $(;)?) => {{
+        let (left_range, left) = $left.0.ok_or(error::Error::EmptyOperand($range.clone()))?;
+        let (right_range, right) = $right.0.ok_or(error::Error::EmptyOperand($range.clone()))?;
+        let left = compile_node(&left_range, left, $variables)?;
+        let right = compile_node(&right_range, right, $variables)?;
+        match (left, right) {
+            $(($lt(left), $rt(right)) => $ot($out::$op(left.into(), right.into())),)*
+            _ => {
+                return Err(error::Error::TypeMismatchBinary(
+                    left_range,
+                    right_range,
+                    $expected
+                ))
+            }
+        }
+    }};
+}
 fn compile_node(
     range: &pos::Range,
     node: syntax::Node,
     variables: &HashMap<String, value::Value>,
 ) -> Result<program::Expression, error::Error> {
+    use program::{
+        BooleanExpression, Expression, RealExpression, SoundExpression, StringExpression,
+    };
+    use syntax::Node;
+    use Expression::{Boolean, Real, Sound, String};
     Ok(match node {
         syntax::Node::Identifier(name) => match variables
             .get(&name)
             .ok_or(error::Error::UndefinedVariable(name, range.clone()))?
         {
-            value::Value::Real(rc) => {
-                program::Expression::Real(program::RealExpression::Reference(rc.clone()))
-            }
-            value::Value::Boolean(rc) => {
-                program::Expression::Boolean(program::BooleanExpression::Reference(rc.clone()))
-            }
-            value::Value::Sound(rc) => {
-                program::Expression::Sound(program::SoundExpression::Reference(rc.clone()))
-            }
-            value::Value::String(rc) => {
-                program::Expression::String(program::StringExpression::Reference(rc.clone()))
-            }
-            value::Value::RealFunction(fnc) => program::Expression::RealFunction(fnc.clone()),
-            value::Value::BooleanFunction(fnc) => program::Expression::BooleanFunction(fnc.clone()),
-            value::Value::SoundFunction(fnc) => program::Expression::SoundFunction(fnc.clone()),
-            value::Value::StringFunction(fnc) => program::Expression::StringFunction(fnc.clone()),
-            value::Value::VoidFunction(fnc) => program::Expression::VoidFunction(fnc.clone()),
+            value::Value::Real(rc) => Real(RealExpression::Reference(rc.clone())),
+            value::Value::Boolean(rc) => Boolean(BooleanExpression::Reference(rc.clone())),
+            value::Value::Sound(rc) => Sound(SoundExpression::Reference(rc.clone())),
+            value::Value::String(rc) => String(StringExpression::Reference(rc.clone())),
+            value::Value::RealFunction(fnc) => Expression::RealFunction(fnc.clone()),
+            value::Value::BooleanFunction(fnc) => Expression::BooleanFunction(fnc.clone()),
+            value::Value::SoundFunction(fnc) => Expression::SoundFunction(fnc.clone()),
+            value::Value::StringFunction(fnc) => Expression::StringFunction(fnc.clone()),
+            value::Value::VoidFunction(fnc) => Expression::VoidFunction(fnc.clone()),
         },
-        syntax::Node::Parameter(_) => todo!(),
-        syntax::Node::Number(value) => {
-            program::Expression::Real(program::RealExpression::Const(value))
-        }
-        syntax::Node::String(value) => {
-            program::Expression::String(program::StringExpression::Const(value))
-        }
-        syntax::Node::Print(range, node) => match compile_node(&range, *node, variables)? {
-            program::Expression::Real(expr) => {
-                program::Expression::Real(program::RealExpression::Print(expr.into()))
-            }
-            program::Expression::Boolean(expr) => {
-                program::Expression::Boolean(program::BooleanExpression::Print(expr.into()))
-            }
-            program::Expression::Sound(expr) => {
-                program::Expression::Sound(program::SoundExpression::Play(expr.into()))
-            }
-            program::Expression::String(expr) => {
-                program::Expression::String(program::StringExpression::Print(expr.into()))
-            }
+        Node::Parameter(_) => todo!(),
+        Node::Number(value) => Real(RealExpression::Const(value)),
+        Node::String(value) => String(StringExpression::Const(value)),
+        Node::Print(range, node) => match compile_node(&range, *node, variables)? {
+            Real(expr) => Real(RealExpression::Print(expr.into())),
+            Boolean(expr) => Boolean(BooleanExpression::Print(expr.into())),
+            Sound(expr) => Sound(SoundExpression::Play(expr.into())),
+            String(expr) => String(StringExpression::Print(expr.into())),
             _ => return Err(error::Error::CannotPrint(range)),
         },
-        syntax::Node::Minus(expr) => match expr.0 {
-            Some((range, node)) => match compile_node(&range, node, variables)? {
-                program::Expression::Real(expr) => {
-                    program::Expression::Real(program::RealExpression::Minus(expr.into()))
-                }
-                program::Expression::Sound(expr) => {
-                    program::Expression::Sound(program::SoundExpression::Minus(expr.into()))
-                }
-                _ => return Err(error::Error::TypeMismatchMinus(range)),
-            },
-            None => return Err(error::Error::EmptyOperandMinus(range.clone())),
+        Node::Minus(expr) => {
+            let (range, node) = expr.0.ok_or(error::Error::EmptyOperand(range.clone()))?;
+            match compile_node(&range, node, variables)? {
+                Real(expr) => Real(RealExpression::Minus(expr.into())),
+                Sound(expr) => Sound(SoundExpression::Minus(expr.into())),
+                _ => return Err(error::Error::TypeMismatchReal(range)),
+            }
+        }
+        Node::Reciprocal(expr) => {
+            let (range, node) = expr.0.ok_or(error::Error::EmptyOperand(range.clone()))?;
+            match compile_node(&range, node, variables)? {
+                Real(expr) => Real(RealExpression::Reciprocal(expr.into())),
+                Sound(expr) => Sound(SoundExpression::Reciprocal(expr.into())),
+                _ => return Err(error::Error::TypeMismatchReal(range)),
+            }
+        }
+        Node::Not(expr) => {
+            let (range, node) = expr.0.ok_or(error::Error::EmptyOperand(range.clone()))?;
+            match compile_node(&range, node, variables)? {
+                Boolean(expr) => Boolean(BooleanExpression::Not(expr.into())),
+                _ => return Err(error::Error::TypeMismatchBoolean(range)),
+            }
+        }
+        Node::Add(left, right) => def_binary_operator_real! {
+            left, right, range, variables, "real, Sound or string";
+            Add;
+            String, String => String: StringExpression::Add;
         },
-        syntax::Node::Reciprocal(expr) => match expr.0 {
-            Some((range, node)) => match compile_node(&range, node, variables)? {
-                program::Expression::Real(expr) => {
-                    program::Expression::Real(program::RealExpression::Reciprocal(expr.into()))
-                }
-                program::Expression::Sound(expr) => {
-                    program::Expression::Sound(program::SoundExpression::Reciprocal(expr.into()))
-                }
-                _ => return Err(error::Error::TypeMismatchReciprocal(range)),
-            },
-            None => return Err(error::Error::EmptyOperandReciprocal(range.clone())),
+        Node::Sub(left, right) => def_binary_operator_real! {
+            left, right, range, variables, "real or Sound";
+            Sub;
         },
-        _ => todo!(),
+        Node::Mul(left, right) => def_binary_operator_real! {
+            left, right, range, variables, "real or Sound";
+            Mul;
+        },
+        Node::Div(left, right) => def_binary_operator_real! {
+            left, right, range, variables, "real or Sound";
+            Div;
+        },
+        Node::Rem(left, right) => def_binary_operator_real! {
+            left, right, range, variables, "real or Sound";
+            Rem;
+        },
+        Node::Pow(left, right) => def_binary_operator_real! {
+            left, right, range, variables, "real or Sound";
+            Pow;
+        },
+        Node::LeftShift(left, right) => def_binary_operator! {
+            left, right, range, variables, "Sound (left) and real (right)";
+            Sound, Real => Sound: SoundExpression::LeftShift;
+        },
+        Node::RightShift(left, right) => def_binary_operator! {
+            left, right, range, variables, "Sound (left) and real (right)";
+            Sound, Real => Sound: SoundExpression::RightShift;
+        },
+        Node::Less(left, right) => def_binary_operator! {
+            left, right, range, variables, "real";
+            Real, Real => Boolean: BooleanExpression::RealLess;
+        },
+        Node::Greater(left, right) => def_binary_operator! {
+            left, right, range, variables, "real";
+            Real, Real => Boolean: BooleanExpression::RealGreater;
+        },
+        Node::Equal(left, right) => def_binary_operator! {
+            left, right, range, variables, "real or string";
+            Real, Real => Boolean: BooleanExpression::RealEqual;
+            String, String => Boolean: BooleanExpression::StringEqual;
+        },
+        Node::NotEqual(left, right) => def_binary_operator! {
+            left, right, range, variables, "real or string";
+            Real, Real => Boolean: BooleanExpression::RealNotEqual;
+            String, String => Boolean: BooleanExpression::StringNotEqual;
+        },
+        Node::And(left, right) => def_binary_operator! {
+            left, right, range, variables, "boolean";
+            Boolean, Boolean => Boolean: BooleanExpression::And;
+        },
+        Node::Or(left, right) => def_binary_operator! {
+            left, right, range, variables, "boolean";
+            Boolean, Boolean => Boolean: BooleanExpression::Or;
+        },
+        Node::Group(expr) => {
+            let (range, node) = expr.0.ok_or(error::Error::EmptyOperand(range.clone()))?;
+            return compile_node(&range, node, variables);
+        }
+        Node::Invocation(_, _, _, _) => todo!(),
+        Node::Score(_) => todo!(),
     })
 }
+
 fn compile_expression(
     expression: syntax::Expression,
     variables: &HashMap<String, value::Value>,

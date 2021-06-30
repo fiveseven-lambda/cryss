@@ -16,10 +16,10 @@ pub enum Error {
     ArgumentNameNotIdentifier(Option<pos::Range>, pos::Range),
     UndefinedVariable(String, pos::Range),
     CannotPrint(pos::Range),
-    EmptyOperandMinus(pos::Range),
-    TypeMismatchMinus(pos::Range),
-    EmptyOperandReciprocal(pos::Range),
-    TypeMismatchReciprocal(pos::Range),
+    EmptyOperand(pos::Range),
+    TypeMismatchReal(pos::Range),
+    TypeMismatchBoolean(pos::Range),
+    TypeMismatchBinary(pos::Range, pos::Range, &'static str),
     NoSemicolonAtEndOfStatement(pos::Range),
     UnexpectedToken(pos::Range),
 }
@@ -93,21 +93,24 @@ impl Error {
                 println!("cannot apply `?` (at {})", range);
                 range.print(log);
             }
-            Error::EmptyOperandMinus(range) => {
-                println!("empty operand of `-` (at {})", range);
+            Error::EmptyOperand(range) => {
+                println!("empty operand of operator at {}", range);
                 range.print(log);
             }
-            Error::TypeMismatchMinus(range) => {
-                println!("type mismatch at {}. `-` expected real", range);
+            Error::TypeMismatchReal(range) => {
+                println!("type mismatch at {} (expected real)", range);
                 range.print(log);
             }
-            Error::EmptyOperandReciprocal(range) => {
-                println!("empty operand of `/` (at {})", range);
+            Error::TypeMismatchBoolean(range) => {
+                println!("type mismatch at {} (expected boolean)", range);
                 range.print(log);
             }
-            Error::TypeMismatchReciprocal(range) => {
-                println!("type mismatch at {}. `/` expected real", range);
-                range.print(log);
+            Error::TypeMismatchBinary(left, right, expected) => {
+                println!("type mismatch at {}", left);
+                left.print(log);
+                println!("and {}", right);
+                right.print(log);
+                println!("expected {}", expected);
             }
             Error::NoSemicolonAtEndOfStatement(range) => {
                 println!("no semicolon at end of statement ({})", range);
