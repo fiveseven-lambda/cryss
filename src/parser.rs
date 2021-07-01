@@ -102,7 +102,8 @@ fn parse_print(
 }
 
 macro_rules! def_binary_operator {
-    ($prev:ident => $next:ident: $($from:path => $to:expr),* $(,)?) => {
+    ($(/ $doc:tt)* $prev:ident => $next:ident: $($from:path => $to:expr),* $(,)?) => {
+        $(#[doc = $doc])*
         pub fn $next(
             lexer: &mut lexer::Lexer<impl BufRead>,
             log: &mut Vec<String>,
@@ -131,36 +132,50 @@ macro_rules! def_binary_operator {
 }
 
 def_binary_operator! {
+    / "左シフト `<<`，"
+    / "右シフト `>>`"
+    / ""
+    / "Sound の時間をズラす"
     parse_factor => parse_operator1:
         Token::DoubleLess => ExprNode::LeftShift,
         Token::DoubleGreater => ExprNode::RightShift,
 }
 def_binary_operator! {
+    / "累乗 `^`"
     parse_operator1 => parse_operator2:
         Token::Circumflex => ExprNode::Pow,
 }
 def_binary_operator! {
+    / "掛け算 `*`，"
+    / "割り算 `/`，"
+    / "余り `%`"
     parse_operator2 => parse_operator3:
         Token::Asterisk => ExprNode::Mul,
         Token::Slash => ExprNode::Div,
         Token::Percent => ExprNode::Rem,
 }
 def_binary_operator! {
+    / "足し算 `+`，"
+    / "引き算 `-`"
     parse_operator3 => parse_operator4:
         Token::Plus => ExprNode::Add,
         Token::Minus => ExprNode::Sub,
 }
 def_binary_operator! {
+    / "比較演算子 `<`, `>`"
     parse_operator4 => parse_operator5:
         Token::Less => ExprNode::Less,
         Token::Greater => ExprNode::Greater,
 }
 def_binary_operator! {
+    / "比較演算子 `==`, `!=`"
     parse_operator5 => parse_operator6:
         Token::DoubleEqual => ExprNode::Equal,
         Token::ExclamationEqual => ExprNode::NotEqual,
 }
 def_binary_operator! {
+    / "かつ `&&`，"
+    / "または `||`"
     parse_operator6 => parse_expression:
         Token::DoubleAmpersand => ExprNode::And,
         Token::DoubleBar => ExprNode::Or,
