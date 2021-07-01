@@ -18,6 +18,10 @@ pub enum Error {
     CannotPrint(pos::Range),
     EmptyOperandUnary(pos::Range),
     EmptyOperand(pos::Range),
+    EmptyOperandRight(pos::Range),
+    EmptyArgument(pos::Range),
+    EmptyNamedArgument(pos::Range),
+    EmptyParentheses(pos::Range, pos::Range),
     TypeMismatchReal(pos::Range),
     TypeMismatchBoolean(pos::Range),
     TypeMismatchBinary(pos::Range, pos::Range, &'static str),
@@ -98,9 +102,27 @@ impl Error {
                 println!("empty operand of unary operator at {}", range);
                 range.print(log);
             }
+            Error::EmptyOperandRight(range) => {
+                println!("empty operand after binary operator at {}", range);
+                range.print(log);
+            }
             Error::EmptyOperand(range) => {
                 println!("empty operand of operator at {}", range);
                 range.print(log);
+            }
+            Error::EmptyArgument(range) => {
+                println!("empty argument before comma at {}", range);
+                range.print(log);
+            }
+            Error::EmptyNamedArgument(range) => {
+                println!("empty argument after equal at {}", range);
+                range.print(log);
+            }
+            Error::EmptyParentheses(open, close) => {
+                println!("empty expression between opening parenthesis at {}", open);
+                open.print(log);
+                println!("and closing parenthesis at {}", close);
+                close.print(log);
             }
             Error::TypeMismatchReal(range) => {
                 println!("type mismatch at {} (expected real)", range);

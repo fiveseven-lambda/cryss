@@ -17,7 +17,7 @@ fn main() {
     let mut log = Vec::new();
 
     loop {
-        match parser::parse_print(&mut lexer, &mut log) {
+        match parser::parse_expression(&mut lexer, &mut log) {
             Ok(result) => {
                 println!("{:#?}", result);
             }

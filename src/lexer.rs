@@ -40,7 +40,12 @@ impl Inner {
     /// ファイルの末尾以外では，行は必ず `\n` で終わる（ `std::io::BufRead::read_line` の仕様）．
     /// ファイルの末尾は `\n` で終わっていなければならない．
     /// もしトークンの途中でファイルが終了したらエラーを返す
-    fn run(&mut self, line_num: usize, line: &str, queue: &mut VecDeque<(pos::Range, token::Token)>) -> Result<(), error::Error> {
+    fn run(
+        &mut self,
+        line_num: usize,
+        line: &str,
+        queue: &mut VecDeque<(pos::Range, token::Token)>,
+    ) -> Result<(), error::Error> {
         let mut iter = line.char_indices().peekable();
         let mut prev = None;
         while let Some((index, c)) = iter.next() {
@@ -82,7 +87,11 @@ impl Inner {
                 if let Some((_, string)) = &mut self.string {
                     // 文字列の途中．
                     string.push(match c {
-                        '\\' => match iter.next().ok_or(error::Error::NoCharacterAfterBackSlash(pos))?.1 {
+                        '\\' => match iter
+                            .next()
+                            .ok_or(error::Error::NoCharacterAfterBackSlash(pos))?
+                            .1
+                        {
                             // エスケープ
                             'n' => '\n',
                             'r' => '\r',
@@ -100,14 +109,21 @@ impl Inner {
             prev = match prev {
                 Some((start, prev_state)) => {
                     let next_state = match (prev_state, c) {
-                        (State::Identifier, 'a'..='z' | 'A'..='Z' | '_' | '$' | '0'..='9') => State::Identifier,
-                        (State::Parameter, 'a'..='z' | 'A'..='Z' | '_' | '$' | '0'..='9') => State::Parameter,
+                        (State::Identifier, 'a'..='z' | 'A'..='Z' | '_' | '$' | '0'..='9') => {
+                            State::Identifier
+                        }
+                        (State::Parameter, 'a'..='z' | 'A'..='Z' | '_' | '$' | '0'..='9') => {
+                            State::Parameter
+                        }
                         (State::Integer, '0'..='9') => State::Integer,
                         (State::Integer, '.') => State::Decimal,
                         (State::Dot | State::Decimal, '0'..='9') => State::Decimal,
                         (State::Integer | State::Decimal, 'e' | 'E') => State::ScientificIncomplete,
                         (State::ScientificIncomplete, '+' | '-') => State::ScientificSign,
-                        (State::ScientificIncomplete | State::ScientificSign | State::Scientific, '0'..='9') => State::Scientific,
+                        (
+                            State::ScientificIncomplete | State::ScientificSign | State::Scientific,
+                            '0'..='9',
+                        ) => State::Scientific,
                         (State::Equal, '=') => State::DoubleEqual,
                         (State::Exclamation, '=') => State::ExclamationEqual,
                         (State::Ampersand, '&') => State::DoubleAmpersand,
@@ -140,19 +156,29 @@ impl Inner {
                                     "if" => token::Token::KeywordIf,
                                     "while" => token::Token::KeywordWhile,
                                     "for" => token::Token::KeywordFor,
-                                    "fnc" => token::Token::KeywordFnc,
                                     "let" => token::Token::KeywordLet,
                                     "break" => token::Token::KeywordBreak,
                                     "continue" => token::Token::KeywordContinue,
                                     s => token::Token::Identifier(s.to_string()),
                                 },
-                                State::Parameter => token::Token::Parameter(line[start.byte()..index].to_string()),
-                                State::Integer | State::Decimal | State::Scientific => match line[start.byte()..index].parse() {
-                                    Ok(value) => token::Token::Number(value),
-                                    Err(err) => return Err(error::Error::ParseFloatError(pos::Range::new(start, pos), err)),
-                                },
+                                State::Parameter => {
+                                    token::Token::Parameter(line[start.byte()..index].to_string())
+                                }
+                                State::Integer | State::Decimal | State::Scientific => {
+                                    match line[start.byte()..index].parse() {
+                                        Ok(value) => token::Token::Number(value),
+                                        Err(err) => {
+                                            return Err(error::Error::ParseFloatError(
+                                                pos::Range::new(start, pos),
+                                                err,
+                                            ))
+                                        }
+                                    }
+                                }
                                 State::ScientificIncomplete | State::ScientificSign => {
-                                    return Err(error::Error::IncompleteScientificNotation(pos::Range::new(start, pos)));
+                                    return Err(error::Error::IncompleteScientificNotation(
+                                        pos::Range::new(start, pos),
+                                    ));
                                 }
                                 State::String(string) => token::Token::String(string),
                                 State::Plus => token::Token::Plus,
@@ -182,8 +208,16 @@ impl Inner {
                                 State::ClosingBracket => token::Token::ClosingBracket,
                                 State::OpeningBrace => token::Token::OpeningBrace,
                                 State::ClosingBrace => token::Token::ClosingBrace,
-                                State::Ampersand => return Err(error::Error::SingleAmpersand(pos::Range::new(start, pos))),
-                                State::Dot => return Err(error::Error::SingleDot(pos::Range::new(start, pos))),
+                                State::Ampersand => {
+                                    return Err(error::Error::SingleAmpersand(pos::Range::new(
+                                        start, pos,
+                                    )))
+                                }
+                                State::Dot => {
+                                    return Err(error::Error::SingleDot(pos::Range::new(
+                                        start, pos,
+                                    )))
+                                }
                             };
                             // queue への push_back を行うのはここ 1 箇所だけ．
                             queue.push_back((pos::Range::new(start, pos.clone()), token));
@@ -347,7 +381,10 @@ impl<BufRead: std::io::BufRead> Lexer<BufRead> {
     /// - 字句解析に失敗したら，エラーを返す．
     /// - 字句解析に成功したら， `Option` に包んでトークンを返す
     ///   （ `None` は，ファイル終端に達し全てのトークンを読み切ったことを意味する）．
-    pub fn next(&mut self, log: &mut Vec<String>) -> Result<Option<(pos::Range, token::Token)>, error::Error> {
+    pub fn next(
+        &mut self,
+        log: &mut Vec<String>,
+    ) -> Result<Option<(pos::Range, token::Token)>, error::Error> {
         loop {
             match self.queue.pop_front() {
                 Some(token) => return Ok(Some(token)),
@@ -360,7 +397,12 @@ impl<BufRead: std::io::BufRead> Lexer<BufRead> {
                         print!("> ");
                         std::io::stdout().flush().expect("failed to flush stdout");
                     }
-                    if self.reader.read_line(&mut line).expect("failed to read input") > 0 {
+                    if self
+                        .reader
+                        .read_line(&mut line)
+                        .expect("failed to read input")
+                        > 0
+                    {
                         let result = self.inner.run(log.len(), &line, &mut self.queue);
                         log.push(line);
                         result?;

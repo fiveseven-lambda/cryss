@@ -17,7 +17,6 @@ pub enum Token {
     KeywordSound,
     /// キーワード `string`
     KeywordString,
-    KeywordFnc,
     KeywordLet,
     KeywordBreak,
     KeywordContinue,

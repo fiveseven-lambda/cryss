@@ -75,6 +75,9 @@ macro_rules! def_binary_operator {
         }
     }};
 }
+
+/// variable は，
+/// そのスコープに存在する変数
 fn compile_node(
     range: &pos::Range,
     node: syntax::Node,
