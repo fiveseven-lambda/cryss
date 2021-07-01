@@ -94,19 +94,11 @@ impl Range {
             );
         } else {
             // 複数行にわたる場合
-            print!(
-                "{} !-> {}",
-                &log[start.line][..start.byte],
-                &log[start.line][start.byte..]
-            );
+            print!("{} !-> {}", &log[start.line][..start.byte], &log[start.line][start.byte..]);
             for row in &log[start.line + 1..end.line] {
                 print!("{}", row);
             }
-            print!(
-                "{} <-! {}",
-                &log[end.line][..end.byte],
-                &log[end.line][end.byte..]
-            );
+            print!("{} <-! {}", &log[end.line][..end.byte], &log[end.line][end.byte..]);
         }
     }
 }

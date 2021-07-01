@@ -16,6 +16,7 @@ pub enum Error {
     ArgumentNameNotIdentifier(Option<pos::Range>, pos::Range),
     UndefinedVariable(String, pos::Range),
     CannotPrint(pos::Range),
+    EmptyOperandUnary(pos::Range),
     EmptyOperand(pos::Range),
     TypeMismatchReal(pos::Range),
     TypeMismatchBoolean(pos::Range),
@@ -91,6 +92,10 @@ impl Error {
             }
             Error::CannotPrint(range) => {
                 println!("cannot apply `?` (at {})", range);
+                range.print(log);
+            }
+            Error::EmptyOperandUnary(range) => {
+                println!("empty operand of unary operator at {}", range);
                 range.print(log);
             }
             Error::EmptyOperand(range) => {

@@ -71,9 +71,9 @@ pub enum Token {
     /// `?`: 出力
     Question,
     /// `(`
-    OpeningParen,
+    OpeningParenthesis,
     /// `)`
-    ClosingParen,
+    ClosingParenthesis,
     /// `[`
     OpeningBracket,
     /// `]`

@@ -3,47 +3,39 @@
 use crate::pos;
 use std::collections::HashMap;
 
-/// None は空の式を表す
-pub struct Expression(pub Option<(pos::Range, Node)>);
-impl Expression {
-    pub fn new(range: pos::Range, node: Node) -> Expression {
-        Expression(Some((range, node)))
-    }
-    pub fn empty() -> Expression {
-        Expression(None)
-    }
-    pub fn range(&self) -> Option<pos::Range> {
-        self.0.as_ref().map(|(range, _)| range.clone())
-    }
-    pub fn try_into_identifier(self) -> Result<String, Expression> {
-        match self.0 {
-            Some((_, Node::Identifier(name))) => Ok(name),
-            _ => Err(self),
-        }
-    }
+/// 式
+#[derive(Debug)]
+pub struct Expression {
+    pub range: pos::Range,
+    pub node: ExpressionNode,
 }
-/// デバッグ用　最後には消す
-impl std::fmt::Debug for Expression {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match &self.0 {
-            Some((_range, node)) => match f.alternate() {
-                true => write!(f, "{:#?}", node),
-                false => write!(f, "{:?}", node),
-            },
-            None => write!(f, "empty"),
-        }
+
+impl Expression {
+    pub fn new(range: pos::Range, node: ExpressionNode) -> Expression {
+        Expression { range, node }
     }
 }
 
+/// 式を表す木のノード
 #[derive(Debug)]
-pub enum Node {
+pub enum ExpressionNode {
+    /// 識別子
     Identifier(String),
+    /// 関数呼び出し
+    Invocation(String, Vec<Expression>, HashMap<String, Expression>),
+    /// 属性（先頭が `$` で始まるもの）
     Parameter(String),
+    /// 数値リテラル
     Number(f64),
+    /// 文字列リテラル
     String(String),
-    Print(pos::Range, Box<Node>),
+    /// 出力（後置演算子 `?` ）
+    Print(Box<Expression>),
+    /// 負号（前置演算子 `-` ）
     Minus(Box<Expression>),
+    /// 逆数（前置演算子 `/` ）
     Reciprocal(Box<Expression>),
+    /// 否定（前置演算子 `!` ）
     Not(Box<Expression>),
     Add(Box<Expression>, Box<Expression>),
     Sub(Box<Expression>, Box<Expression>),
@@ -59,24 +51,37 @@ pub enum Node {
     NotEqual(Box<Expression>, Box<Expression>),
     And(Box<Expression>, Box<Expression>),
     Or(Box<Expression>, Box<Expression>),
-    Invocation(
-        pos::Range,
-        Box<Node>,
-        Vec<Expression>,
-        HashMap<String, Expression>,
-    ),
+    /// 丸括弧 `( )` でくくられた部分
     Group(Box<Expression>),
+    /// 角括弧 `[ ]` でくくって `,` `;` で区切る
     Score(Vec<Vec<Expression>>),
 }
 
-#[derive(Debug)]
-pub enum Statement {
-    Expression(Expression),
+/// 文
+pub struct Statement {
+    range: pos::Range,
+    node: StatementNode,
+}
+
+impl Statement {
+    fn new(range: pos::Range, node: StatementNode) -> Statement {
+        Statement { range, node }
+    }
+}
+
+pub enum StatementNode {
+    /// 式だけの文
+    Expression(Option<Expression>),
+    /// 代入文
     Substitution(String, Expression),
+    /// 宣言と代入
     Declaration(String, Expression),
+    /// 波括弧 `{ }` で囲まれたブロック
     Block(Vec<Statement>),
-    While(Expression, Box<Statement>),
+    /// if 文
     If(Expression, Box<Statement>),
+    /// while 文
+    While(Expression, Box<Statement>),
     Break,
     Continue,
 }
