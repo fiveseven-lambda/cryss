@@ -1,16 +1,16 @@
 //! CReate Your Sound from Scratch
 
-// mod compiler;
-// mod environment;
+mod compiler;
+mod environment;
 mod error;
 mod lexer;
 mod parser;
 mod pos;
-// mod program;
-// mod sound;
+mod program;
+mod sound;
 mod syntax;
 mod token;
-// mod value;
+mod value;
 
 fn main() {
     let mut lexer = lexer::Lexer::new(std::io::BufReader::new(std::io::stdin()), true);

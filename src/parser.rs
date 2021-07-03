@@ -1,4 +1,4 @@
-//! トークンを抽象構文木に変換する．
+//! トークン（ `mod token` ）を抽象構文木（ `mod syntax` ）に変換する．
 
 use crate::{error, lexer, pos, syntax, token};
 use error::Error;

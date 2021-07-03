@@ -1,4 +1,4 @@
-//! ソースコードを読み，トークンに分割する．
+//! ソースコードを読み，トークン（ `mod token` ）に分割する．
 
 use crate::{error, pos, token};
 use std::collections::VecDeque;

@@ -141,26 +141,3 @@ impl Add<&Range> for &Range {
         Range::new(self.start.clone(), other.end.clone())
     }
 }
-/*
-/// `a + b` において， `b` が `None` であれば `a` 自体を返す．
-impl Add<Option<Range>> for Range {
-    type Output = Range;
-    fn add(self, right: Option<Range>) -> Range {
-        match right {
-            Some(right) => self + right,
-            None => self,
-        }
-    }
-}
-/// `a + b` において， `a` が `None` であれば `b` 自体を返す．
-impl Add<Range> for Option<Range> {
-    type Output = Range;
-    fn add(self, right: Range) -> Range {
-        match self {
-            Some(left) => left + right,
-            None => right,
-        }
-    }
-}
-
-*/
