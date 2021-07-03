@@ -4,24 +4,24 @@ use crate::pos;
 use std::collections::HashMap;
 
 /// 式
-pub struct Expr {
+pub struct Expression {
     pub range: pos::Range,
-    pub node: ExprNode,
+    pub node: Node,
 }
 
-impl Expr {
-    pub fn new(range: pos::Range, node: ExprNode) -> Expr {
-        Expr { range, node }
+impl Expression {
+    pub fn new(range: pos::Range, node: Node) -> Expression {
+        Expression { range, node }
     }
 }
 
 /// 式を表す木のノード
 #[derive(Debug)]
-pub enum ExprNode {
+pub enum Node {
     /// 識別子
     Identifier(String),
     /// 関数呼び出し
-    Invocation(String, Vec<Expr>, HashMap<String, Expr>),
+    Invocation(String, Vec<Expression>, HashMap<String, Expression>),
     /// 属性（先頭が `$` で始まるもの）
     Parameter(String),
     /// 数値リテラル
@@ -29,65 +29,55 @@ pub enum ExprNode {
     /// 文字列リテラル
     String(String),
     /// 出力（後置演算子 `?` ）
-    Print(Box<Expr>),
+    Print(Box<Expression>),
     /// 負号（前置演算子 `-` ）
-    Minus(Box<Expr>),
+    Minus(Box<Expression>),
     /// 逆数（前置演算子 `/` ）
-    Reciprocal(Box<Expr>),
+    Reciprocal(Box<Expression>),
     /// 否定（前置演算子 `!` ）
-    Not(Box<Expr>),
-    Add(Box<Expr>, Box<Expr>),
-    Sub(Box<Expr>, Box<Expr>),
-    Mul(Box<Expr>, Box<Expr>),
-    Div(Box<Expr>, Box<Expr>),
-    Rem(Box<Expr>, Box<Expr>),
-    Pow(Box<Expr>, Box<Expr>),
-    LeftShift(Box<Expr>, Box<Expr>),
-    RightShift(Box<Expr>, Box<Expr>),
-    Less(Box<Expr>, Box<Expr>),
-    Greater(Box<Expr>, Box<Expr>),
-    Equal(Box<Expr>, Box<Expr>),
-    NotEqual(Box<Expr>, Box<Expr>),
-    And(Box<Expr>, Box<Expr>),
-    Or(Box<Expr>, Box<Expr>),
+    Not(Box<Expression>),
+    Add(Box<Expression>, Box<Expression>),
+    Sub(Box<Expression>, Box<Expression>),
+    Mul(Box<Expression>, Box<Expression>),
+    Div(Box<Expression>, Box<Expression>),
+    Rem(Box<Expression>, Box<Expression>),
+    Pow(Box<Expression>, Box<Expression>),
+    LeftShift(Box<Expression>, Box<Expression>),
+    RightShift(Box<Expression>, Box<Expression>),
+    Less(Box<Expression>, Box<Expression>),
+    Greater(Box<Expression>, Box<Expression>),
+    Equal(Box<Expression>, Box<Expression>),
+    NotEqual(Box<Expression>, Box<Expression>),
+    And(Box<Expression>, Box<Expression>),
+    Or(Box<Expression>, Box<Expression>),
     /// 丸括弧 `( )` でくくられた部分
-    Group(Box<Expr>),
+    Group(Box<Expression>),
     /// 角括弧 `[ ]` でくくって `,` `;` で区切る
-    Score(Vec<Vec<Expr>>),
+    Score(Vec<Vec<Expression>>),
 }
 
 /// 文
-pub struct Stmt {
-    range: pos::Range,
-    node: StmtNode,
-}
-
-impl Stmt {
-    fn new(range: pos::Range, node: StmtNode) -> Stmt {
-        Stmt { range, node }
-    }
-}
-
-pub enum StmtNode {
+#[derive(Debug)]
+pub enum Statement {
     /// 式だけの文
-    Expression(Option<Expr>),
+    Expression(Option<Expression>),
     /// 代入文
-    Substitution(String, Expr),
+    Substitution(String, Expression),
     /// 宣言と代入
-    Declaration(String, Expr),
+    Declaration(String, Expression),
     /// 波括弧 `{ }` で囲まれたブロック
-    Block(Vec<Stmt>),
+    Block(Vec<Statement>),
     /// if 文
-    If(Expr, Box<Stmt>),
+    If(Expression, Box<Statement>),
     /// while 文
-    While(Expr, Box<Stmt>),
+    While(Expression, Box<Statement>),
     Break,
     Continue,
 }
 
 use std::fmt::{Debug, Formatter, Result as FResult};
 /// デバッグ用！あとで消す
-impl Debug for Expr {
+impl Debug for Expression {
     fn fmt(&self, f: &mut Formatter) -> FResult {
         write!(f, "{:#?} ({})", self.node, self.range)
     }

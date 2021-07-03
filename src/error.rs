@@ -12,8 +12,10 @@ pub enum Error {
     SingleAmpersand(pos::Range),
     SingleDot(pos::Range),
     ParseFloatError(pos::Range, std::num::ParseFloatError),
-    UnclosedBracketUntil(pos::Range, Option<pos::Range>),
-    ArgumentNameNotIdentifier(Option<pos::Range>, pos::Range),
+    UnclosedBracketUntil(pos::Range, pos::Range),
+    UnclosedBracketUntilEOF(pos::Range),
+    EmptyArgumentName(pos::Range),
+    InvalidArgumentName(pos::Range, pos::Range),
     UndefinedVariable(String, pos::Range),
     CannotPrint(pos::Range),
     EmptyOperandUnary(pos::Range),
@@ -22,11 +24,18 @@ pub enum Error {
     EmptyArgument(pos::Range),
     EmptyNamedArgument(pos::Range),
     EmptyParentheses(pos::Range, pos::Range),
+    EmptyItemInList(pos::Range),
+    EmptyRHS(pos::Range),
     TypeMismatchReal(pos::Range),
     TypeMismatchBoolean(pos::Range),
     TypeMismatchBinary(pos::Range, pos::Range, &'static str),
+    LHSNotIdentifier(pos::Range, pos::Range),
     NoSemicolonAtEndOfStatement(pos::Range),
     UnexpectedToken(pos::Range),
+    NoSubstitutionAfterLet(pos::Range, Option<pos::Range>, Option<pos::Range>),
+    UnexpectedTokenAfterKeyword(pos::Range, pos::Range),
+    UnexpectedEOFAfterKeyword(pos::Range),
+    UnexpectedEOFAfterCondition(pos::Range, pos::Range),
 }
 
 impl Error {
@@ -69,25 +78,24 @@ impl Error {
                 range.print(log);
             }
             Error::UnclosedBracketUntil(open, range) => {
-                match range {
-                    Some(range) => {
-                        println!("unexpected token at {}", range);
-                        range.print(log);
-                    }
-                    None => println!("unexpected end of file"),
-                }
+                println!("unexpected token at {}", range);
+                range.print(log);
                 println!("note: bracket opened at {}", open);
                 open.print(log);
             }
-            Error::ArgumentNameNotIdentifier(range, equal) => {
-                match range {
-                    Some(range) => {
-                        println!("invalid argument name at {}", range);
-                        range.print(log);
-                    }
-                    None => println!("empty argument name"),
-                }
-                println!("note: argument name is needed before `=` at {}", equal);
+            Error::UnclosedBracketUntilEOF(open) => {
+                println!("unexpected end of file");
+                println!("note: bracket opened at {}", open);
+                open.print(log);
+            }
+            Error::EmptyArgumentName(equal) => {
+                println!("empty argument name before `=` at {}", equal);
+                equal.print(log);
+            }
+            Error::InvalidArgumentName(range, equal) => {
+                println!("invalid argument name at {}", range);
+                range.print(log);
+                println!("before `=` at {}", equal);
                 equal.print(log);
             }
             Error::UndefinedVariable(name, range) => {
@@ -124,6 +132,10 @@ impl Error {
                 println!("and closing parenthesis at {}", close);
                 close.print(log);
             }
+            Error::EmptyItemInList(sep) => {
+                println!("empty expression before separator in list at {}", sep);
+                sep.print(log);
+            }
             Error::TypeMismatchReal(range) => {
                 println!("type mismatch at {} (expected real)", range);
                 range.print(log);
@@ -146,6 +158,50 @@ impl Error {
             Error::UnexpectedToken(range) => {
                 println!("unexpected token at {}", range);
                 range.print(log);
+            }
+            Error::LHSNotIdentifier(range, equal) => {
+                println!("lvalue required at {}", range);
+                range.print(log);
+                println!("before `=` at {}", equal);
+                equal.print(log);
+            }
+            Error::EmptyRHS(equal) => {
+                println!("empty expression after `=` at {}", equal);
+                equal.print(log);
+            }
+            Error::NoSubstitutionAfterLet(r#let, expr, end) => {
+                println!("no substitution after `let` at {}", r#let);
+                r#let.print(log);
+                match expr {
+                    Some(expr) => {
+                        println!("right hand side at {}", expr);
+                        expr.print(log);
+                    }
+                    None => println!("right hand side is empty"),
+                }
+                match end {
+                    Some(end) => {
+                        println!("unexpected token at {}", end);
+                        end.print(log);
+                    }
+                    None => println!("unexpected end of file"),
+                }
+            }
+            Error::UnexpectedTokenAfterKeyword(keyword, token) => {
+                println!("unexpected token at {}", token);
+                token.print(log);
+                println!("after keyword at {}", keyword);
+                keyword.print(log);
+            }
+            Error::UnexpectedEOFAfterKeyword(keyword) => {
+                println!("unexpected end of file after keyword at {}", keyword);
+                keyword.print(log);
+            }
+            Error::UnexpectedEOFAfterCondition(keyword, condition) => {
+                println!("unexpected end of file after keyword at {}", keyword);
+                keyword.print(log);
+                println!("and condition at {}", condition);
+                condition.print(log);
             }
         }
     }

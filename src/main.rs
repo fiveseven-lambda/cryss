@@ -17,13 +17,10 @@ fn main() {
     let mut log = Vec::new();
 
     loop {
-        match parser::parse_expression(&mut lexer, &mut log) {
-            Ok(result) => {
-                println!("{:#?}", result);
-            }
-            Err(err) => {
-                err.print(&log);
-            }
+        match parser::parse_statement(&mut lexer, &mut log) {
+            Ok(Some(result)) => println!("{:#?}", result),
+            Ok(None) => break,
+            Err(err) => err.print(&log),
         }
     }
 }
