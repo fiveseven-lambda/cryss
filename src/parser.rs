@@ -139,7 +139,7 @@ def_binary_operator! {
     / "右シフト `>>`"
     / ""
     / "Sound の時間をズラす"
-    parse_factor => parse_operator1:
+    parse_print => parse_operator1:
         Token::DoubleLess => Node::LeftShift,
         Token::DoubleGreater => Node::RightShift,
 }
@@ -273,13 +273,13 @@ fn parse_statement_or_token(
     match parse_expression(lexer, log)? {
         (expr, Some((_, Token::Semicolon))) => Ok(Statement::Expression(expr).into()),
         (Some(lhs), Some((equal, Token::Equal))) => {
-            let (name, expr) = parse_substitution(lexer, log, lhs, equal)?;
-            Ok(Statement::Substitution(name, expr).into())
+            let (range, name, expr) = parse_substitution(lexer, log, lhs, equal)?;
+            Ok(Statement::Substitution(range, name, expr).into())
         }
         (None, Some((r#let, Token::KeywordLet))) => match parse_expression(lexer, log)? {
             (Some(lhs), Some((equal, Token::Equal))) => {
-                let (name, expr) = parse_substitution(lexer, log, lhs, equal)?;
-                Ok(Statement::Declaration(name, expr).into())
+                let (range, name, expr) = parse_substitution(lexer, log, lhs, equal)?;
+                Ok(Statement::Declaration(range, name, expr).into())
             }
             (expr, end) => {
                 let range = expr.map(|expr| expr.range);
@@ -320,13 +320,13 @@ fn parse_substitution(
     log: &mut Vec<String>,
     lhs: Expression,
     equal: pos::Range,
-) -> Result<(String, Expression), Error> {
+) -> Result<(pos::Range, String, Expression), Error> {
     let name = match lhs.node {
         Node::Identifier(name) => name,
         _ => return Err(Error::LHSNotIdentifier(lhs.range, equal)),
     };
     match parse_expression(lexer, log)? {
-        (Some(expr), Some((_, Token::Semicolon))) => Ok((name, expr)),
+        (Some(expr), Some((_, Token::Semicolon))) => Ok((lhs.range, name, expr)),
         (None, _) => Err(Error::EmptyRHS(equal)),
         (Some(expr), _) => Err(Error::NoSemicolonAtEndOfStatement(expr.range)),
     }

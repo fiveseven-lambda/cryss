@@ -1,6 +1,6 @@
 //! エラー出力のためのモジュール
 
-use crate::pos;
+use crate::{pos, types};
 
 pub enum Error {
     UnexpectedCharacter(pos::Pos),
@@ -26,9 +26,8 @@ pub enum Error {
     EmptyParentheses(pos::Range, pos::Range),
     EmptyItemInList(pos::Range),
     EmptyRHS(pos::Range),
-    TypeMismatchReal(pos::Range),
-    TypeMismatchBoolean(pos::Range),
-    TypeMismatchBinary(pos::Range, pos::Range, &'static str),
+    TypeMismatchUnary(pos::Range, types::Type),
+    TypeMismatchBinary(pos::Range, types::Type, pos::Range, types::Type),
     LHSNotIdentifier(pos::Range, pos::Range),
     NoSemicolonAtEndOfStatement(pos::Range),
     UnexpectedToken(pos::Range),
@@ -36,6 +35,7 @@ pub enum Error {
     UnexpectedTokenAfterKeyword(pos::Range, pos::Range),
     UnexpectedEOFAfterKeyword(pos::Range),
     UnexpectedEOFAfterCondition(pos::Range, pos::Range),
+    VoidRHS(pos::Range),
 }
 
 impl Error {
@@ -136,20 +136,15 @@ impl Error {
                 println!("empty expression before separator in list at {}", sep);
                 sep.print(log);
             }
-            Error::TypeMismatchReal(range) => {
-                println!("type mismatch at {} (expected real)", range);
+            Error::TypeMismatchUnary(range, ty) => {
+                println!("type mismatch at {} (found {})", range, ty);
                 range.print(log);
             }
-            Error::TypeMismatchBoolean(range) => {
-                println!("type mismatch at {} (expected boolean)", range);
-                range.print(log);
-            }
-            Error::TypeMismatchBinary(left, right, expected) => {
-                println!("type mismatch at {}", left);
+            Error::TypeMismatchBinary(left, left_ty, right, right_ty) => {
+                println!("type mismatch at {} (found {})", left, left_ty);
                 left.print(log);
-                println!("and {}", right);
+                println!("and {} (found {})", right, right_ty);
                 right.print(log);
-                println!("expected {}", expected);
             }
             Error::NoSemicolonAtEndOfStatement(range) => {
                 println!("no semicolon at end of statement ({})", range);
@@ -202,6 +197,10 @@ impl Error {
                 keyword.print(log);
                 println!("and condition at {}", condition);
                 condition.print(log);
+            }
+            Error::VoidRHS(range) => {
+                println!("void expression at rhs {}", range);
+                range.print(log);
             }
         }
     }

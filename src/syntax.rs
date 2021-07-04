@@ -62,9 +62,9 @@ pub enum Statement {
     /// 式だけの文
     Expression(Option<Expression>),
     /// 代入文
-    Substitution(String, Expression),
+    Substitution(pos::Range, String, Expression),
     /// 宣言と代入
-    Declaration(String, Expression),
+    Declaration(pos::Range, String, Expression),
     /// 波括弧 `{ }` で囲まれたブロック
     Block(Vec<Statement>),
     /// if 文
