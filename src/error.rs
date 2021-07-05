@@ -28,6 +28,7 @@ pub enum Error {
     EmptyRHS(pos::Range),
     TypeMismatchUnary(pos::Range, types::Type),
     TypeMismatchBinary(pos::Range, types::Type, pos::Range, types::Type),
+    TypeMismatchCond(pos::Range, types::Type),
     LHSNotIdentifier(pos::Range, pos::Range),
     NoSemicolonAtEndOfStatement(pos::Range),
     UnexpectedToken(pos::Range),
@@ -145,6 +146,10 @@ impl Error {
                 left.print(log);
                 println!("and {} (found {})", right, right_ty);
                 right.print(log);
+            }
+            Error::TypeMismatchCond(cond, ty) => {
+                println!("type mismatch at {} (found {})", cond, ty);
+                cond.print(log);
             }
             Error::NoSemicolonAtEndOfStatement(range) => {
                 println!("no semicolon at end of statement ({})", range);

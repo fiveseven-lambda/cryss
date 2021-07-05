@@ -1,11 +1,12 @@
 //! 型チェックを済ませたプログラム
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 use crate::{error, pos, sound, types};
 
 type RcCell<T> = Rc<Cell<T>>;
+type RcRefCell<T> = Rc<RefCell<T>>;
 
 pub enum Expression {
     Real(RealExpression),
@@ -41,7 +42,7 @@ impl Expression {
             Expression::Void(_) => types::Type::Void,
         }
     }
-    pub fn evaluate(self) {
+    pub fn evaluate(&self) {
         match self {
             Expression::Real(expr) => {
                 expr.evaluate();
@@ -78,9 +79,9 @@ pub enum RealExpression {
 }
 
 impl RealExpression {
-    fn evaluate(self) -> f64 {
+    fn evaluate(&self) -> f64 {
         match self {
-            RealExpression::Const(value) => value,
+            RealExpression::Const(value) => *value,
             RealExpression::Reference(rc) => rc.get(),
             RealExpression::Print(expr) => {
                 let ret = expr.evaluate();
@@ -115,7 +116,7 @@ pub enum BooleanExpression {
 }
 
 impl BooleanExpression {
-    fn evaluate(self) -> bool {
+    fn evaluate(&self) -> bool {
         match self {
             BooleanExpression::Reference(rc) => rc.get(),
             BooleanExpression::Print(expr) => {
@@ -141,7 +142,7 @@ impl BooleanExpression {
 }
 
 pub enum SoundExpression {
-    Reference(RcCell<sound::Sound>),
+    Reference(RcRefCell<sound::Sound>),
     Play(Box<SoundExpression>),
     Real(RealExpression),
     Minus(Box<SoundExpression>),
@@ -157,23 +158,23 @@ pub enum SoundExpression {
 }
 
 impl SoundExpression {
-    fn evaluate(self) -> sound::Sound {
+    fn evaluate(&self) -> sound::Sound {
         todo!();
     }
 }
 
 pub enum StringExpression {
     Const(String),
-    Reference(RcCell<String>),
+    Reference(RcRefCell<String>),
     Print(Box<StringExpression>),
     Add(Box<StringExpression>, Box<StringExpression>),
 }
 
 impl StringExpression {
-    fn evaluate(self) -> String {
+    fn evaluate(&self) -> String {
         match self {
-            StringExpression::Const(string) => string,
-            StringExpression::Reference(_) => todo!(),
+            StringExpression::Const(string) => string.to_owned(),
+            StringExpression::Reference(rc) => rc.borrow().clone(),
             StringExpression::Print(expr) => {
                 let ret = expr.evaluate();
                 println!("{}", ret);
@@ -185,7 +186,7 @@ impl StringExpression {
 }
 pub enum VoidExpression {}
 impl VoidExpression {
-    fn evaluate(self) {
+    fn evaluate(&self) {
         todo!();
     }
 }
@@ -194,15 +195,18 @@ pub enum Statement {
     Expression(Option<Expression>),
     RealSubstitution(RcCell<f64>, RealExpression),
     BooleanSubstitution(RcCell<bool>, BooleanExpression),
-    SoundSubstitution(RcCell<sound::Sound>, SoundExpression),
-    StringSubstitution(RcCell<String>, StringExpression),
+    SoundSubstitution(RcRefCell<sound::Sound>, SoundExpression),
+    StringSubstitution(RcRefCell<String>, StringExpression),
+    While(BooleanExpression, Box<Statement>),
+    If(BooleanExpression, Box<Statement>),
+    Block(Vec<Statement>),
 }
 
 impl Statement {
-    pub fn run(self) {
+    pub fn run(&self) {
         match self {
             Statement::Expression(expr) => {
-                expr.map(|expr| expr.evaluate());
+                expr.as_ref().map(|expr| expr.evaluate());
             }
             Statement::RealSubstitution(rc, expr) => {
                 rc.set(expr.evaluate());
@@ -211,10 +215,23 @@ impl Statement {
                 rc.set(expr.evaluate());
             }
             Statement::StringSubstitution(rc, expr) => {
-                rc.set(expr.evaluate());
+                *rc.borrow_mut() = expr.evaluate();
             }
             Statement::SoundSubstitution(rc, expr) => {
-                rc.set(expr.evaluate());
+                *rc.borrow_mut() = expr.evaluate();
+            }
+            Statement::While(cond, stmt) => {
+                while cond.evaluate() {
+                    stmt.run();
+                }
+            }
+            Statement::If(cond, stmt) => {
+                if cond.evaluate() {
+                    stmt.run();
+                }
+            }
+            Statement::Block(vec) => {
+                vec.iter().for_each(Statement::run);
             }
         }
     }

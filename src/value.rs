@@ -1,8 +1,9 @@
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
 type RcCell<T> = Rc<Cell<T>>;
+type RcRefCell<T> = Rc<RefCell<T>>;
 
 use crate::{program, sound, types};
 
@@ -11,8 +12,8 @@ use crate::{program, sound, types};
 pub enum Value {
     Real(RcCell<f64>),
     Boolean(RcCell<bool>),
-    Sound(RcCell<sound::Sound>),
-    String(RcCell<String>),
+    Sound(RcRefCell<sound::Sound>),
+    String(RcRefCell<String>),
 }
 
 impl Value {

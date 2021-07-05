@@ -3,7 +3,7 @@
 use crate::{error, pos, program, syntax, types, value};
 use std::collections::HashMap;
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 /// variable は，そのスコープに存在する変数
@@ -299,17 +299,45 @@ pub fn compile_statement(
                     program::Statement::BooleanSubstitution(rc, expr)
                 }
                 program::Expression::String(expr) => {
-                    let rc = Rc::new(Cell::new("".to_string()));
+                    let rc = Rc::new(RefCell::new("".to_string()));
                     variables.insert(name, value::Value::String(rc.clone()));
                     program::Statement::StringSubstitution(rc, expr)
                 }
                 program::Expression::Sound(expr) => {
                     todo!();
                 }
-                program::Expression::Void(expr) => {
+                program::Expression::Void(_) => {
                     return Err(error::Error::VoidRHS(range));
                 }
             }
+        }
+        syntax::Statement::Block(vec) => {
+            let copied = &mut variables.clone();
+            program::Statement::Block(
+                vec.into_iter()
+                    .map(|stmt| compile_statement(stmt, copied))
+                    .collect::<Result<_, _>>()?,
+            )
+        }
+        syntax::Statement::While(expr, stmt) => {
+            let cond = compile_expression(expr, variables)?;
+            let cond = match cond.0 {
+                program::Expression::Boolean(expr) => expr,
+                other => return Err(error::Error::TypeMismatchCond(cond.1, other.ty())),
+            };
+            let copied = &mut variables.clone();
+            let stmt = compile_statement(*stmt, copied)?;
+            program::Statement::While(cond, stmt.into())
+        }
+        syntax::Statement::If(expr, stmt) => {
+            let cond = compile_expression(expr, variables)?;
+            let cond = match cond.0 {
+                program::Expression::Boolean(expr) => expr,
+                other => return Err(error::Error::TypeMismatchCond(cond.1, other.ty())),
+            };
+            let copied = &mut variables.clone();
+            let stmt = compile_statement(*stmt, copied)?;
+            program::Statement::If(cond, stmt.into())
         }
         _ => todo!(),
     })
