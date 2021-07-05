@@ -41,6 +41,8 @@ pub enum Token {
     Circumflex,
     /// `=`: 代入
     Equal,
+    /// `=>`: 右代入
+    RightArrow,
     /// `==`: 等しい
     DoubleEqual,
     /// `!`: 論理否定

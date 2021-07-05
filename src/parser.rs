@@ -272,6 +272,20 @@ fn parse_statement_or_token(
 ) -> Result<StatementOrToken, Error> {
     match parse_expression(lexer, log)? {
         (expr, Some((_, Token::Semicolon))) => Ok(Statement::Expression(expr).into()),
+        (Some(expr), Some((arrow, Token::RightArrow))) => match lexer.next(log)? {
+            Some((range, token::Token::Identifier(name))) => {
+                Ok(Statement::Substitution(range, name, expr).into())
+            }
+            Some((r#let, token::Token::KeywordLet)) => match lexer.next(log)? {
+                Some((range, token::Token::Identifier(name))) => {
+                    Ok(Statement::Declaration(range, name, expr).into())
+                }
+                Some((range, _)) => Err(Error::RHSNotIdentifierLet(range, arrow, r#let)),
+                None => Err(Error::UnexpectedEOFAfterRightArrowLet(arrow, r#let)),
+            },
+            Some((range, _)) => Err(Error::RHSNotIdentifier(range, arrow)),
+            None => Err(Error::UnexpectedEOFAfterRightArrow(arrow)),
+        },
         (Some(lhs), Some((equal, Token::Equal))) => {
             let (range, name, expr) = parse_substitution(lexer, log, lhs, equal)?;
             Ok(Statement::Substitution(range, name, expr).into())
