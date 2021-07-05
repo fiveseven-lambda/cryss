@@ -273,13 +273,19 @@ fn parse_statement_or_token(
     match parse_expression(lexer, log)? {
         (expr, Some((_, Token::Semicolon))) => Ok(Statement::Expression(expr).into()),
         (Some(expr), Some((arrow, Token::RightArrow))) => match lexer.next(log)? {
-            Some((range, token::Token::Identifier(name))) => {
-                Ok(Statement::Substitution(range, name, expr).into())
-            }
-            Some((r#let, token::Token::KeywordLet)) => match lexer.next(log)? {
-                Some((range, token::Token::Identifier(name))) => {
-                    Ok(Statement::Declaration(range, name, expr).into())
+            Some((range, token::Token::Identifier(name))) => match lexer.next(log)? {
+                Some((_, token::Token::Semicolon)) => {
+                    Ok(Statement::Substitution(range, name, expr).into())
                 }
+                _ => Err(Error::NoSemicolonAtEndOfStatement(expr.range)),
+            },
+            Some((r#let, token::Token::KeywordLet)) => match lexer.next(log)? {
+                Some((range, token::Token::Identifier(name))) => match lexer.next(log)? {
+                    Some((_, token::Token::Semicolon)) => {
+                        Ok(Statement::Declaration(range, name, expr).into())
+                    }
+                    _ => Err(Error::NoSemicolonAtEndOfStatement(expr.range)),
+                },
                 Some((range, _)) => Err(Error::RHSNotIdentifierLet(range, arrow, r#let)),
                 None => Err(Error::UnexpectedEOFAfterRightArrowLet(arrow, r#let)),
             },
