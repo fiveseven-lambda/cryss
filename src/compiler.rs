@@ -51,117 +51,111 @@ fn compile_expression(
             (Boolean(expr), _) => BooleanExpression::Not(expr.into()).into(),
             (other, range) => return Err(error::Error::TypeMismatchUnary(range, other.ty())),
         },
-        Node::Add(left, right) => match (
-            compile_expression(*left, variables)?,
-            compile_expression(*right, variables)?,
-        ) {
-            ((Real(left), _), (Real(right), _)) => {
-                RealExpression::Add(left.into(), right.into()).into()
+        Node::Add(left, right) => {
+            let l = compile_expression(*left, variables)?;
+            let r = compile_expression(*right, variables)?;
+            match (l.0, r.0) {
+                (Real(left), Real(right)) => RealExpression::Add(left.into(), right.into()).into(),
+                (Sound(left), Sound(right)) => {
+                    SoundExpression::Add(left.into(), right.into()).into()
+                }
+                (Sound(left), Real(right)) => {
+                    SoundExpression::Add(left.into(), SoundExpression::Real(right).into()).into()
+                }
+                (Real(left), Sound(right)) => {
+                    SoundExpression::Add(SoundExpression::Real(left).into(), right.into()).into()
+                }
+                (String(left), String(right)) => {
+                    StringExpression::Add(left.into(), right.into()).into()
+                }
+                (x, y) => return Err(error::Error::TypeMismatchBinary(l.1, x.ty(), r.1, y.ty())),
             }
-            ((Sound(left), _), (Sound(right), _)) => {
-                SoundExpression::Add(left.into(), right.into()).into()
+        }
+        Node::Sub(left, right) => {
+            let l = compile_expression(*left, variables)?;
+            let r = compile_expression(*right, variables)?;
+            match (l.0, r.0) {
+                (Real(left), Real(right)) => RealExpression::Sub(left.into(), right.into()).into(),
+                (Sound(left), Sound(right)) => {
+                    SoundExpression::Sub(left.into(), right.into()).into()
+                }
+                (Sound(left), Real(right)) => {
+                    SoundExpression::Sub(left.into(), SoundExpression::Real(right).into()).into()
+                }
+                (Real(left), Sound(right)) => {
+                    SoundExpression::Sub(SoundExpression::Real(left).into(), right.into()).into()
+                }
+                (x, y) => return Err(error::Error::TypeMismatchBinary(l.1, x.ty(), r.1, y.ty())),
             }
-            ((Sound(left), _), (Real(right), _)) => {
-                SoundExpression::Add(left.into(), SoundExpression::Real(right).into()).into()
+        }
+        Node::Mul(left, right) => {
+            let l = compile_expression(*left, variables)?;
+            let r = compile_expression(*right, variables)?;
+            match (l.0, r.0) {
+                (Real(left), Real(right)) => RealExpression::Mul(left.into(), right.into()).into(),
+                (Sound(left), Sound(right)) => {
+                    SoundExpression::Mul(left.into(), right.into()).into()
+                }
+                (Sound(left), Real(right)) => {
+                    SoundExpression::Mul(left.into(), SoundExpression::Real(right).into()).into()
+                }
+                (Real(left), Sound(right)) => {
+                    SoundExpression::Mul(SoundExpression::Real(left).into(), right.into()).into()
+                }
+                (x, y) => return Err(error::Error::TypeMismatchBinary(l.1, x.ty(), r.1, y.ty())),
             }
-            ((Real(left), _), (Sound(right), _)) => {
-                SoundExpression::Add(SoundExpression::Real(left).into(), right.into()).into()
+        }
+        Node::Div(left, right) => {
+            let l = compile_expression(*left, variables)?;
+            let r = compile_expression(*right, variables)?;
+            match (l.0, r.0) {
+                (Real(left), Real(right)) => RealExpression::Div(left.into(), right.into()).into(),
+                (Sound(left), Sound(right)) => {
+                    SoundExpression::Div(left.into(), right.into()).into()
+                }
+                (Sound(left), Real(right)) => {
+                    SoundExpression::Div(left.into(), SoundExpression::Real(right).into()).into()
+                }
+                (Real(left), Sound(right)) => {
+                    SoundExpression::Div(SoundExpression::Real(left).into(), right.into()).into()
+                }
+                (x, y) => return Err(error::Error::TypeMismatchBinary(l.1, x.ty(), r.1, y.ty())),
             }
-            ((String(left), _), (String(right), _)) => {
-                StringExpression::Add(left.into(), right.into()).into()
+        }
+        Node::Rem(left, right) => {
+            let l = compile_expression(*left, variables)?;
+            let r = compile_expression(*right, variables)?;
+            match (l.0, r.0) {
+                (Real(left), Real(right)) => RealExpression::Rem(left.into(), right.into()).into(),
+                (Sound(left), Sound(right)) => {
+                    SoundExpression::Rem(left.into(), right.into()).into()
+                }
+                (Sound(left), Real(right)) => {
+                    SoundExpression::Rem(left.into(), SoundExpression::Real(right).into()).into()
+                }
+                (Real(left), Sound(right)) => {
+                    SoundExpression::Rem(SoundExpression::Real(left).into(), right.into()).into()
+                }
+                (x, y) => return Err(error::Error::TypeMismatchBinary(l.1, x.ty(), r.1, y.ty())),
             }
-            ((l, x), (r, y)) => return Err(error::Error::TypeMismatchBinary(x, l.ty(), y, r.ty())),
-        },
-        Node::Sub(left, right) => match (
-            compile_expression(*left, variables)?,
-            compile_expression(*right, variables)?,
-        ) {
-            ((Real(left), _), (Real(right), _)) => {
-                RealExpression::Sub(left.into(), right.into()).into()
+        }
+        Node::Pow(left, right) => {
+            let l = compile_expression(*left, variables)?;
+            let r = compile_expression(*right, variables)?;
+            match (l.0, r.0) {
+                (Real(left), Real(right)) => RealExpression::Pow(left.into(), right.into()).into(),
+                (Sound(left), Sound(right)) => {
+                    SoundExpression::Pow(left.into(), right.into()).into()
+                }
+                (Sound(left), Real(right)) => {
+                    SoundExpression::Pow(left.into(), SoundExpression::Real(right).into()).into()
+                }
+                (Real(left), Sound(right)) => {
+                    SoundExpression::Pow(SoundExpression::Real(left).into(), right.into()).into()
+                }
+                (x, y) => return Err(error::Error::TypeMismatchBinary(l.1, x.ty(), r.1, y.ty())),
             }
-            ((Sound(left), _), (Sound(right), _)) => {
-                SoundExpression::Sub(left.into(), right.into()).into()
-            }
-            ((Sound(left), _), (Real(right), _)) => {
-                SoundExpression::Sub(left.into(), SoundExpression::Real(right).into()).into()
-            }
-            ((Real(left), _), (Sound(right), _)) => {
-                SoundExpression::Sub(SoundExpression::Real(left).into(), right.into()).into()
-            }
-            ((l, x), (r, y)) => return Err(error::Error::TypeMismatchBinary(x, l.ty(), y, r.ty())),
-        },
-        Node::Mul(left, right) => match (
-            compile_expression(*left, variables)?,
-            compile_expression(*right, variables)?,
-        ) {
-            ((Real(left), _), (Real(right), _)) => {
-                RealExpression::Mul(left.into(), right.into()).into()
-            }
-            ((Sound(left), _), (Sound(right), _)) => {
-                SoundExpression::Mul(left.into(), right.into()).into()
-            }
-            ((Sound(left), _), (Real(right), _)) => {
-                SoundExpression::Mul(left.into(), SoundExpression::Real(right).into()).into()
-            }
-            ((Real(left), _), (Sound(right), _)) => {
-                SoundExpression::Mul(SoundExpression::Real(left).into(), right.into()).into()
-            }
-            ((l, x), (r, y)) => return Err(error::Error::TypeMismatchBinary(x, l.ty(), y, r.ty())),
-        },
-        Node::Div(left, right) => match (
-            compile_expression(*left, variables)?,
-            compile_expression(*right, variables)?,
-        ) {
-            ((Real(left), _), (Real(right), _)) => {
-                RealExpression::Div(left.into(), right.into()).into()
-            }
-            ((Sound(left), _), (Sound(right), _)) => {
-                SoundExpression::Div(left.into(), right.into()).into()
-            }
-            ((Sound(left), _), (Real(right), _)) => {
-                SoundExpression::Div(left.into(), SoundExpression::Real(right).into()).into()
-            }
-            ((Real(left), _), (Sound(right), _)) => {
-                SoundExpression::Div(SoundExpression::Real(left).into(), right.into()).into()
-            }
-            ((l, x), (r, y)) => return Err(error::Error::TypeMismatchBinary(x, l.ty(), y, r.ty())),
-        },
-        Node::Rem(left, right) => match (
-            compile_expression(*left, variables)?,
-            compile_expression(*right, variables)?,
-        ) {
-            ((Real(left), _), (Real(right), _)) => {
-                RealExpression::Rem(left.into(), right.into()).into()
-            }
-            ((Sound(left), _), (Sound(right), _)) => {
-                SoundExpression::Rem(left.into(), right.into()).into()
-            }
-            ((Sound(left), _), (Real(right), _)) => {
-                SoundExpression::Rem(left.into(), SoundExpression::Real(right).into()).into()
-            }
-            ((Real(left), _), (Sound(right), _)) => {
-                SoundExpression::Rem(SoundExpression::Real(left).into(), right.into()).into()
-            }
-            ((l, x), (r, y)) => return Err(error::Error::TypeMismatchBinary(x, l.ty(), y, r.ty())),
-        },
-        Node::Pow(left, right) => match (
-            compile_expression(*left, variables)?,
-            compile_expression(*right, variables)?,
-        ) {
-            ((Real(left), _), (Real(right), _)) => {
-                RealExpression::Pow(left.into(), right.into()).into()
-            }
-            ((Sound(left), _), (Sound(right), _)) => {
-                SoundExpression::Pow(left.into(), right.into()).into()
-            }
-            ((Sound(left), _), (Real(right), _)) => {
-                SoundExpression::Pow(left.into(), SoundExpression::Real(right).into()).into()
-            }
-            ((Real(left), _), (Sound(right), _)) => {
-                SoundExpression::Pow(SoundExpression::Real(left).into(), right.into()).into()
-            }
-            ((l, x), (r, y)) => return Err(error::Error::TypeMismatchBinary(x, l.ty(), y, r.ty())),
-        },
+        }
         Node::LeftShift(left, right) => match (
             compile_expression(*left, variables)?,
             compile_expression(*right, variables)?,
