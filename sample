@@ -4,3 +4,15 @@ let adsr =
     * min(1, Exp(-.1) >> 2)
     * Sin(440);
 write(adsr, 3, "adsr.wav");
+
+let kick =
+    sin(2 * PI * 100 * Exp(-.5) * .5)
+    * Exp(-.1);
+write(kick, 1, "kick.wav");
+
+let fm =
+    sin(
+        Linear(0, 2 * PI * 220, 1)
+        + 3 * Sin(440)
+    );
+write(fm, 3, "fm.wav");
