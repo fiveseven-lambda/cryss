@@ -37,6 +37,8 @@ pub enum Sound {
     Linear { slope: f64, intercept: f64 },    // x = at + b
     Sin { frequency: f64, phase: f64 },       // x = sin(τft + θ)
     Exp { coefficient: f64, intercept: f64 }, // x = ae^(bt)
+    Begin(f64),
+    End(f64),
     Rand,
     Minus(Box<Sound>),
     Reciprocal(Box<Sound>),
@@ -68,6 +70,8 @@ impl Sound {
                 coefficient,
                 intercept: intercept * (coefficient * t).exp(),
             },
+            Sound::Begin(time) => Sound::Begin(time + t),
+            Sound::End(time) => Sound::End(time + t),
             Sound::Rand => Sound::Rand,
             Sound::Minus(sound) => Sound::Minus(sound.shift(t).into()),
             Sound::Reciprocal(sound) => Sound::Reciprocal(sound.shift(t).into()),
@@ -107,6 +111,8 @@ impl Sound {
                 next: intercept,
                 ratio: (coefficient / samplerate).exp(),
             },
+            Sound::Begin(time) => SoundIter::Begin((time * samplerate) as i64),
+            Sound::End(time) => SoundIter::End((time * samplerate) as i64),
             Sound::Rand => SoundIter::Rand(rand::thread_rng()),
             Sound::Minus(sound) => SoundIter::Minus(sound.iter(samplerate).into()),
             Sound::Reciprocal(sound) => SoundIter::Reciprocal(sound.iter(samplerate).into()),
@@ -154,6 +160,8 @@ pub enum SoundIter {
         next: Complex64,
         ratio: Complex64,
     },
+    Begin(i64),
+    End(i64),
     Rand(ThreadRng),
     Minus(Box<SoundIter>),
     Reciprocal(Box<SoundIter>),
@@ -188,6 +196,22 @@ impl SoundIter {
                 let ret = *next;
                 *next *= *ratio;
                 ret
+            }
+            SoundIter::Begin(i) => {
+                if *i < 0 {
+                    *i += 1;
+                    0.
+                } else {
+                    1.
+                }
+            }
+            SoundIter::End(i) => {
+                if *i < 0 {
+                    *i += 1;
+                    1.
+                } else {
+                    0.
+                }
             }
             SoundIter::Rand(rng) => rng.gen(),
             SoundIter::Minus(iter) => -iter.next(),

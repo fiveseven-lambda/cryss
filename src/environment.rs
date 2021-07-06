@@ -3,11 +3,12 @@
 use crate::compiler;
 use crate::error::Error;
 use crate::function::Function;
+use crate::sound::Sound;
 use crate::syntax::Statement;
 use crate::value::Value;
 use std::collections::HashMap;
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
 pub struct Environment {
@@ -30,6 +31,14 @@ impl Environment {
         variables.insert(
             "E".to_string(),
             Value::Real(Rc::new(Cell::new(std::f64::consts::PI))),
+        );
+        variables.insert(
+            "Begin".to_string(),
+            Value::Sound(Rc::new(RefCell::new(Sound::Begin(0.)))),
+        );
+        variables.insert(
+            "End".to_string(),
+            Value::Sound(Rc::new(RefCell::new(Sound::End(0.)))),
         );
         let mut functions = HashMap::new();
         functions.insert("sqrt".to_string(), Function::primitive_real_1(f64::sqrt));

@@ -1,14 +1,23 @@
 let adsr =
     min(1, Linear(0, 50, 1))
-    * ((.9 * Exp(-1) + .1) >> /50)
+    * (.9 * Exp(-1) + .1) >> /50
     * min(1, Exp(-.1) >> 2)
     * Sin(440);
 write(adsr, 3, "adsr.wav");
 
 let kick =
     sin(2 * PI * 100 * Exp(-.5) * .5)
+    * Begin
     * Exp(-.1);
 write(kick, 1, "kick.wav");
+
+let drum = Linear(0, 0, 1);
+let i = 0;
+while(i < 16){
+    drum = drum + kick >> (i / 4);
+    i = i + 1;
+}
+write(drum, 5, "drum.wav");
 
 let fm =
     sin(
