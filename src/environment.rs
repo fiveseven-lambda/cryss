@@ -63,6 +63,9 @@ impl Environment {
             "min".to_string(),
             function::Function::primitive_real_2(f64::min),
         );
+        functions.insert("Sin".to_string(), function::Function::sin());
+        functions.insert("Linear".to_string(), function::Function::linear());
+        functions.insert("write".to_string(), function::Function::write());
         Environment {
             variables,
             functions,

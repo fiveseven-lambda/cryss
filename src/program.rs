@@ -79,6 +79,15 @@ impl Argument {
             Argument::String(rc, expr) => *rc.borrow_mut() = expr.evaluate(),
         }
     }
+    /// これも `&self` じゃなくて `self` がいい……
+    fn evaluate(&self) -> sound::Argument {
+        match self {
+            Argument::Real(rc, expr) => sound::Argument::Real(rc.clone(), expr.evaluate()),
+            Argument::Boolean(rc, expr) => sound::Argument::Boolean(rc.clone(), expr.evaluate()),
+            Argument::Sound(rc, expr) => sound::Argument::Sound(rc.clone(), expr.evaluate()),
+            Argument::String(rc, expr) => sound::Argument::String(rc.clone(), expr.evaluate()),
+        }
+    }
 }
 
 pub enum RealExpression {
@@ -176,11 +185,32 @@ pub enum SoundExpression {
     Pow(Box<SoundExpression>, Box<SoundExpression>),
     LeftShift(Box<SoundExpression>, Box<RealExpression>),
     RightShift(Box<SoundExpression>, Box<RealExpression>),
+    Invocation(Rc<function::SoundFunction>, Vec<Argument>),
+    Apply(
+        Rc<function::RealFunction>,
+        Vec<Argument>,
+        Vec<(RcCell<f64>, SoundExpression)>,
+    ),
 }
 
 impl SoundExpression {
     fn evaluate(&self) -> sound::Sound {
-        todo!();
+        match self {
+            SoundExpression::Reference(rc) => rc.borrow().clone(),
+            SoundExpression::Invocation(fnc, arguments) => {
+                arguments.iter().for_each(Argument::set);
+                fnc.evaluate()
+            }
+            SoundExpression::Apply(fnc, arguments, sounds) => sound::Sound::Apply(
+                fnc.clone(),
+                arguments.iter().map(Argument::evaluate).collect(),
+                sounds
+                    .iter()
+                    .map(|(rc, expr)| (rc.clone(), expr.evaluate()))
+                    .collect(),
+            ),
+            _ => todo!(),
+        }
     }
 }
 
@@ -205,10 +235,17 @@ impl StringExpression {
         }
     }
 }
-pub enum VoidExpression {}
+pub enum VoidExpression {
+    Invocation(Rc<function::VoidFunction>, Vec<Argument>),
+}
 impl VoidExpression {
     fn evaluate(&self) {
-        todo!();
+        match self {
+            VoidExpression::Invocation(fnc, arguments) => {
+                arguments.iter().for_each(Argument::set);
+                fnc.evaluate()
+            }
+        }
     }
 }
 

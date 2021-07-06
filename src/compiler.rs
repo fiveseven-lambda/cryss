@@ -1,6 +1,6 @@
 //! 抽象構文木（ `mod syntax` ）を型チェックして実行可能なプログラム（ `mod program` ）にする．
 
-use crate::{error, function, pos, program, syntax, value};
+use crate::{error, function, pos, program, sound, syntax, value};
 use std::collections::HashMap;
 
 use std::cell::{Cell, RefCell};
@@ -35,6 +35,7 @@ fn compile_expression(
                 None => return Err(Error::UndefinedFunction(name, expression.range)),
             };
             let mut vec = Vec::new();
+            let mut sounds = Vec::new();
             if arguments.len() != function.arguments.len() {
                 return Err(Error::WrongNumberOfArguments(
                     expression.range,
@@ -53,13 +54,36 @@ fn compile_expression(
                     (Value::String(rc), String(expr)) => {
                         vec.push(Argument::String(rc.clone(), expr))
                     }
+                    (Value::Real(rc), Sound(expr)) => {
+                        sounds.push((rc.clone(), expr));
+                    }
                     (_, other) => return Err(Error::TypeMismatchArgument(argument.1, other.ty())),
                 }
             }
-            // 名前付き引数も……
-            match &function.body {
-                function::Body::Real(body) => RealExpression::Invocation(body.clone(), vec).into(),
-                _ => todo!(),
+            for (name, expr) in named_arguments {
+                // todo: 名前付き引数も……
+            }
+
+            if sounds.is_empty() {
+                match &function.body {
+                    function::Body::Real(body) => {
+                        RealExpression::Invocation(body.clone(), vec).into()
+                    }
+                    function::Body::Sound(body) => {
+                        SoundExpression::Invocation(body.clone(), vec).into()
+                    }
+                    function::Body::Void(body) => {
+                        VoidExpression::Invocation(body.clone(), vec).into()
+                    }
+                    _ => todo!(),
+                }
+            } else {
+                match &function.body {
+                    function::Body::Real(body) => {
+                        SoundExpression::Apply(body.clone(), vec, sounds).into()
+                    }
+                    _ => todo!(),
+                }
             }
         }
         Node::Parameter(_) => todo!(),
@@ -328,7 +352,9 @@ pub fn compile_statement(
                     program::Statement::StringSubstitution(rc, expr)
                 }
                 program::Expression::Sound(expr) => {
-                    todo!();
+                    let rc = Rc::new(RefCell::new(sound::Sound::Const(0.)));
+                    variables.insert(name, value::Value::Sound(rc.clone()));
+                    program::Statement::SoundSubstitution(rc, expr)
                 }
                 program::Expression::Void(_) => {
                     return Err(Error::VoidRHS(range));
