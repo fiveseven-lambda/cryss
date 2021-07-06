@@ -18,14 +18,11 @@ pub enum Error {
     InvalidArgumentName(pos::Range, pos::Range),
     UndefinedVariable(String, pos::Range),
     UndefinedFunction(String, pos::Range),
-    CannotPrint(pos::Range),
     EmptyOperandUnary(pos::Range),
-    EmptyOperand(pos::Range),
     EmptyOperandRight(pos::Range),
     EmptyArgument(pos::Range),
     EmptyNamedArgument(pos::Range),
     EmptyParentheses(pos::Range, pos::Range),
-    EmptyItemInList(pos::Range),
     EmptyRHS(pos::Range),
     TypeMismatchUnary(pos::Range, types::Type),
     TypeMismatchBinary(pos::Range, types::Type, pos::Range, types::Type),
@@ -114,20 +111,12 @@ impl Error {
                 println!("undefined function {} at {}", name, range);
                 range.print(log);
             }
-            Error::CannotPrint(range) => {
-                println!("cannot apply `?` (at {})", range);
-                range.print(log);
-            }
             Error::EmptyOperandUnary(range) => {
                 println!("empty operand of unary operator at {}", range);
                 range.print(log);
             }
             Error::EmptyOperandRight(range) => {
                 println!("empty operand after binary operator at {}", range);
-                range.print(log);
-            }
-            Error::EmptyOperand(range) => {
-                println!("empty operand of operator at {}", range);
                 range.print(log);
             }
             Error::EmptyArgument(range) => {
@@ -143,10 +132,6 @@ impl Error {
                 open.print(log);
                 println!("and closing parenthesis at {}", close);
                 close.print(log);
-            }
-            Error::EmptyItemInList(sep) => {
-                println!("empty expression before separator in list at {}", sep);
-                sep.print(log);
             }
             Error::TypeMismatchUnary(range, ty) => {
                 println!("type mismatch at {} (found {})", range, ty);

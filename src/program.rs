@@ -8,6 +8,7 @@ use crate::{function, sound, types};
 type RcCell<T> = Rc<Cell<T>>;
 type RcRefCell<T> = Rc<RefCell<T>>;
 
+#[derive(Clone)]
 pub enum Expression {
     Real(RealExpression),
     Boolean(BooleanExpression),
@@ -42,8 +43,7 @@ impl Expression {
             Expression::Void(_) => types::Type::Void,
         }
     }
-    /// これ `&self` ではなく `self` にしたい
-    pub fn evaluate(&self) {
+    pub fn evaluate(self) {
         match self {
             Expression::Real(expr) => {
                 expr.evaluate();
@@ -64,6 +64,7 @@ impl Expression {
     }
 }
 
+#[derive(Clone)]
 pub enum Argument {
     Real(RcCell<f64>, RealExpression),
     Boolean(RcCell<bool>, BooleanExpression),
@@ -72,7 +73,7 @@ pub enum Argument {
 }
 
 impl Argument {
-    fn set(&self) {
+    fn set(self) {
         match self {
             Argument::Real(rc, expr) => rc.set(expr.evaluate()),
             Argument::Boolean(rc, expr) => rc.set(expr.evaluate()),
@@ -80,8 +81,7 @@ impl Argument {
             Argument::String(rc, expr) => *rc.borrow_mut() = expr.evaluate(),
         }
     }
-    /// これも `&self` じゃなくて `self` がいい……
-    fn evaluate(&self) -> sound::Argument {
+    fn evaluate(self) -> sound::Argument {
         match self {
             Argument::Real(rc, expr) => sound::Argument::Real(rc.clone(), expr.evaluate()),
             Argument::Boolean(rc, expr) => sound::Argument::Boolean(rc.clone(), expr.evaluate()),
@@ -91,6 +91,7 @@ impl Argument {
     }
 }
 
+#[derive(Clone)]
 pub enum RealExpression {
     Const(f64),
     Reference(RcCell<f64>),
@@ -107,9 +108,9 @@ pub enum RealExpression {
 }
 
 impl RealExpression {
-    fn evaluate(&self) -> f64 {
+    fn evaluate(self) -> f64 {
         match self {
-            RealExpression::Const(value) => *value,
+            RealExpression::Const(value) => value,
             RealExpression::Reference(rc) => rc.get(),
             RealExpression::Print(expr) => {
                 let ret = expr.evaluate();
@@ -125,13 +126,14 @@ impl RealExpression {
             RealExpression::Rem(left, right) => left.evaluate() % right.evaluate(),
             RealExpression::Pow(left, right) => left.evaluate().powf(right.evaluate()),
             RealExpression::Invocation(fnc, arguments) => {
-                arguments.iter().for_each(Argument::set);
+                arguments.into_iter().for_each(Argument::set);
                 fnc.evaluate()
             }
         }
     }
 }
 
+#[derive(Clone)]
 pub enum BooleanExpression {
     Reference(RcCell<bool>),
     Print(Box<BooleanExpression>),
@@ -144,10 +146,11 @@ pub enum BooleanExpression {
     StringNotEqual(Box<StringExpression>, Box<StringExpression>),
     And(Box<BooleanExpression>, Box<BooleanExpression>),
     Or(Box<BooleanExpression>, Box<BooleanExpression>),
+    Invocation(Rc<function::BooleanFunction>, Vec<Argument>),
 }
 
 impl BooleanExpression {
-    fn evaluate(&self) -> bool {
+    fn evaluate(self) -> bool {
         match self {
             BooleanExpression::Reference(rc) => rc.get(),
             BooleanExpression::Print(expr) => {
@@ -168,10 +171,15 @@ impl BooleanExpression {
             BooleanExpression::StringNotEqual(left, right) => left.evaluate() != right.evaluate(),
             BooleanExpression::And(left, right) => left.evaluate() && right.evaluate(),
             BooleanExpression::Or(left, right) => left.evaluate() || right.evaluate(),
+            BooleanExpression::Invocation(fnc, arguments) => {
+                arguments.into_iter().for_each(Argument::set);
+                fnc.evaluate()
+            }
         }
     }
 }
 
+#[derive(Clone)]
 pub enum SoundExpression {
     Reference(RcRefCell<sound::Sound>),
     Play(Box<SoundExpression>),
@@ -195,20 +203,20 @@ pub enum SoundExpression {
 }
 
 impl SoundExpression {
-    fn evaluate(&self) -> sound::Sound {
+    fn evaluate(self) -> sound::Sound {
         match self {
             SoundExpression::Reference(rc) => rc.borrow().clone(),
             SoundExpression::Invocation(fnc, arguments) => {
-                arguments.iter().for_each(Argument::set);
+                arguments.into_iter().for_each(Argument::set);
                 fnc.evaluate()
             }
             SoundExpression::Real(expr) => sound::Sound::Const(expr.evaluate()),
             SoundExpression::Apply(fnc, arguments, sounds) => sound::Sound::Apply(
                 fnc.clone(),
-                arguments.iter().map(Argument::evaluate).collect(),
+                arguments.into_iter().map(Argument::evaluate).collect(),
                 sounds
-                    .iter()
-                    .map(|(rc, expr)| (rc.clone(), expr.evaluate()))
+                    .into_iter()
+                    .map(|(rc, expr)| (rc, expr.evaluate()))
                     .collect(),
             ),
             SoundExpression::Play(expr) => expr.evaluate(),
@@ -238,17 +246,19 @@ impl SoundExpression {
     }
 }
 
+#[derive(Clone)]
 pub enum StringExpression {
     Const(String),
     Reference(RcRefCell<String>),
     Print(Box<StringExpression>),
     Add(Box<StringExpression>, Box<StringExpression>),
+    Invocation(Rc<function::StringFunction>, Vec<Argument>),
 }
 
 impl StringExpression {
-    fn evaluate(&self) -> String {
+    fn evaluate(self) -> String {
         match self {
-            StringExpression::Const(string) => string.to_owned(),
+            StringExpression::Const(string) => string,
             StringExpression::Reference(rc) => rc.borrow().clone(),
             StringExpression::Print(expr) => {
                 let ret = expr.evaluate();
@@ -256,23 +266,29 @@ impl StringExpression {
                 ret
             }
             StringExpression::Add(left, right) => left.evaluate() + &right.evaluate(),
+            StringExpression::Invocation(fnc, arguments) => {
+                arguments.into_iter().for_each(Argument::set);
+                fnc.evaluate()
+            }
         }
     }
 }
+#[derive(Clone)]
 pub enum VoidExpression {
     Invocation(Rc<function::VoidFunction>, Vec<Argument>),
 }
 impl VoidExpression {
-    fn evaluate(&self) {
+    fn evaluate(self) {
         match self {
             VoidExpression::Invocation(fnc, arguments) => {
-                arguments.iter().for_each(Argument::set);
+                arguments.into_iter().for_each(Argument::set);
                 fnc.evaluate()
             }
         }
     }
 }
 
+#[derive(Clone)]
 pub enum Statement {
     Expression(Option<Expression>),
     RealSubstitution(RcCell<f64>, RealExpression),
@@ -285,10 +301,10 @@ pub enum Statement {
 }
 
 impl Statement {
-    pub fn run(&self) {
+    pub fn run(self) {
         match self {
             Statement::Expression(expr) => {
-                expr.as_ref().map(|expr| expr.evaluate());
+                expr.map(Expression::evaluate);
             }
             Statement::RealSubstitution(rc, expr) => {
                 rc.set(expr.evaluate());
@@ -303,8 +319,8 @@ impl Statement {
                 *rc.borrow_mut() = expr.evaluate();
             }
             Statement::While(cond, stmt) => {
-                while cond.evaluate() {
-                    stmt.run();
+                while cond.clone().evaluate() {
+                    stmt.clone().run();
                 }
             }
             Statement::If(cond, stmt) => {
@@ -313,7 +329,7 @@ impl Statement {
                 }
             }
             Statement::Block(vec) => {
-                vec.iter().for_each(Statement::run);
+                vec.into_iter().for_each(Statement::run);
             }
         }
     }

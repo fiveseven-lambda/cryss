@@ -31,6 +31,7 @@ impl Argument {
 }
 
 #[derive(Clone)]
+#[allow(unused)]
 pub enum Sound {
     Const(f64),
     Linear {
@@ -101,22 +102,22 @@ impl Sound {
     }
     /// 本当は `&self` じゃなくて `self` にしたい．
     /// だめな理由を考えて，なければ `self` に
-    pub fn iter(&self, samplerate: f64) -> SoundIter {
+    pub fn iter(self, samplerate: f64) -> SoundIter {
         match self {
-            Sound::Const(value) => SoundIter::Const(*value),
+            Sound::Const(value) => SoundIter::Const(value),
             Sound::Linear { slope, intercept } => SoundIter::Linear {
-                next: *intercept,
+                next: intercept,
                 difference: slope / samplerate,
             },
             Sound::Sin { frequency, phase } => SoundIter::Sin {
-                next: Complex64::from_polar(1., *phase),
+                next: Complex64::from_polar(1., phase),
                 ratio: Complex64::from_polar(1., TAU * frequency / samplerate),
             },
             Sound::Exp {
                 coefficient,
                 intercept,
             } => SoundIter::Exp {
-                next: *intercept,
+                next: intercept,
                 ratio: (coefficient / samplerate).exp(),
             },
             Sound::Rand => SoundIter::Rand(rand::thread_rng()),
@@ -144,7 +145,7 @@ impl Sound {
                 function.clone(),
                 arguments.clone(),
                 sounds
-                    .iter()
+                    .into_iter()
                     .map(|(rc, sound)| (rc.clone(), sound.iter(samplerate)))
                     .collect(),
             ),

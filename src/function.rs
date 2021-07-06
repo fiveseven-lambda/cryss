@@ -79,6 +79,7 @@ impl Function {
     }
 }
 
+#[allow(unused)]
 pub enum Body {
     Real(Rc<RealFunction>),
     Boolean(Rc<BooleanFunction>),
@@ -102,6 +103,11 @@ impl RealFunction {
 }
 
 pub enum BooleanFunction {}
+impl BooleanFunction {
+    pub fn evaluate(&self) -> bool {
+        todo!();
+    }
+}
 
 pub enum SoundFunction {
     Sin(RcCell<f64>),
@@ -134,6 +140,11 @@ impl SoundFunction {
 }
 
 pub enum StringFunction {}
+impl StringFunction {
+    pub fn evaluate(&self) -> String {
+        todo!();
+    }
+}
 
 pub enum VoidFunction {
     Write(RcRefCell<sound::Sound>, RcCell<f64>, RcRefCell<String>),
@@ -143,7 +154,7 @@ impl VoidFunction {
         match self {
             VoidFunction::Write(sound, time, filename) => {
                 let samplerate = 44100;
-                let mut iter = sound.borrow().iter(samplerate as f64);
+                let mut iter = sound.borrow().clone().iter(samplerate as f64);
                 let spec = hound::WavSpec {
                     channels: 1,
                     sample_rate: samplerate,

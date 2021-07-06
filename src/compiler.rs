@@ -13,7 +13,7 @@ fn compile_expression(
     functions: &HashMap<String, function::Function>,
 ) -> Result<(program::Expression, pos::Range), error::Error> {
     use error::Error;
-    use program::Expression::{Boolean, Real, Sound, String, Void};
+    use program::Expression::{Boolean, Real, Sound, String};
     use program::{
         Argument, BooleanExpression, RealExpression, SoundExpression, StringExpression,
         VoidExpression,
@@ -60,7 +60,7 @@ fn compile_expression(
                     (_, other) => return Err(Error::TypeMismatchArgument(argument.1, other.ty())),
                 }
             }
-            for (name, expr) in named_arguments {
+            for (_name, _expr) in named_arguments {
                 // todo: 名前付き引数も……
             }
 
@@ -75,7 +75,12 @@ fn compile_expression(
                     function::Body::Void(body) => {
                         VoidExpression::Invocation(body.clone(), vec).into()
                     }
-                    _ => todo!(),
+                    function::Body::String(body) => {
+                        StringExpression::Invocation(body.clone(), vec).into()
+                    }
+                    function::Body::Boolean(body) => {
+                        BooleanExpression::Invocation(body.clone(), vec).into()
+                    }
                 }
             } else {
                 match &function.body {
