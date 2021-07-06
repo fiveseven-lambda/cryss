@@ -40,6 +40,10 @@ impl Environment {
             "End".to_string(),
             Value::Sound(Rc::new(RefCell::new(Sound::End(0.)))),
         );
+        variables.insert(
+            "Rand".to_string(),
+            Value::Sound(Rc::new(RefCell::new(Sound::Rand))),
+        );
         let mut functions = HashMap::new();
         functions.insert("sqrt".to_string(), Function::primitive_real_1(f64::sqrt));
         functions.insert("sin".to_string(), Function::primitive_real_1(f64::sin));

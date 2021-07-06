@@ -1,27 +1,28 @@
-let adsr =
-    min(1, Linear(0, 50, 1))
-    * (.9 * Exp(-1) + .1) >> /50
-    * min(1, Exp(-.1) >> 2)
-    * Sin(440);
-write(adsr, 3, "adsr.wav");
+let Adsr =
+    .5 * (Sin(440) + Sin(660))    // 440 Hz （ラ）と 660 Hz （ミ）
+    * min(1, Linear(0, 50, 1))    // アタック
+    * (.9 * Exp(-.1) + .1) >> /50 // ディケイ，サステイン
+    * min(1, Exp(-.1) >> 2);      // リリース
+write(Adsr, 3, "adsr.wav");
 
-let kick =
-    sin(2 * PI * 100 * Exp(-.5) * .5)
-    * Begin
-    * Exp(-.1);
-write(kick, 1, "kick.wav");
+let Kick =
+    sin(2 * PI * 100 * Exp(-.5) * .5) // 周波数が下がってゆく波を
+    * Exp(-.1);                       // 減衰させると
+write(Kick, 1, "kick.wav");           // キックの音になる
 
-let drum = Linear(0, 0, 1);
+// キックを 1/4 秒間隔で 16 回並べてみる
+Kick = Begin * Kick;
+let Drum = Linear(0, 0, 1);
 let i = 0;
 while(i < 16){
-    drum = drum + kick >> (i / 4);
+    Drum = Drum + Kick >> (i / 4);
     i = i + 1;
 }
-write(drum, 5, "drum.wav");
+write(Drum, 5, "drum.wav");
 
-let fm =
+let Fm =
     sin(
-        Linear(0, 2 * PI * 220, 1)
-        + 3 * Sin(440)
+        Linear(0, 2 * PI * 220, 1) // 220 Hz の正弦波に
+        + 3 * Sin(440)             // 440 Hz で変調をかける
     );
-write(fm, 3, "fm.wav");
+write(Fm, 3, "fm.wav");            // FM 音源

@@ -80,12 +80,11 @@ impl Function {
     }
 }
 
-#[allow(unused)]
 pub enum Body {
     Real(Rc<RealFunction>),
-    Boolean(Rc<BooleanFunction>),
+    Boolean(Rc<BooleanFunction>), // ユーザ定義関数ができたら使う
     Sound(Rc<SoundFunction>),
-    String(Rc<StringFunction>),
+    String(Rc<StringFunction>), // ユーザ定義関数ができたら使う
     Void(Rc<VoidFunction>),
 }
 

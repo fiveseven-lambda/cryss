@@ -31,7 +31,6 @@ impl Argument {
 }
 
 #[derive(Clone)]
-#[allow(unused)]
 pub enum Sound {
     Const(f64),
     Linear { slope: f64, intercept: f64 },    // x = at + b
