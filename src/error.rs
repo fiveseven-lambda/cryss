@@ -1,6 +1,7 @@
 //! エラー出力のためのモジュール
 
-use crate::{pos, types};
+use crate::pos;
+use crate::types::Type;
 
 pub enum Error {
     UnexpectedCharacter(pos::Pos),
@@ -24,11 +25,11 @@ pub enum Error {
     EmptyNamedArgument(pos::Range),
     EmptyParentheses(pos::Range, pos::Range),
     EmptyRHS(pos::Range),
-    TypeMismatchUnary(pos::Range, types::Type),
-    TypeMismatchBinary(pos::Range, types::Type, pos::Range, types::Type),
-    TypeMismatchCond(pos::Range, types::Type),
+    TypeMismatchUnary(pos::Range, Type),
+    TypeMismatchBinary(pos::Range, Type, pos::Range, Type),
+    TypeMismatchCond(pos::Range, Type),
     WrongNumberOfArguments(pos::Range, usize, usize),
-    TypeMismatchArgument(pos::Range, types::Type),
+    TypeMismatchArgument(pos::Range, Type),
     LHSNotIdentifier(pos::Range, pos::Range),
     RHSNotIdentifier(pos::Range, pos::Range),
     RHSNotIdentifierLet(pos::Range, pos::Range, pos::Range),

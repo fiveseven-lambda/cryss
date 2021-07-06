@@ -1,6 +1,8 @@
 //! ソースコードを読み，トークン（ `mod token` ）に分割する．
 
-use crate::{error, pos, token};
+use crate::error::Error;
+use crate::pos;
+use crate::token::Token;
 use std::collections::VecDeque;
 
 /// 文字列をトークンに分割する．
@@ -44,8 +46,8 @@ impl Inner {
         &mut self,
         line_num: usize,
         line: &str,
-        queue: &mut VecDeque<(pos::Range, token::Token)>,
-    ) -> Result<(), error::Error> {
+        queue: &mut VecDeque<(pos::Range, Token)>,
+    ) -> Result<(), Error> {
         let mut iter = line.char_indices().peekable();
         let mut prev = None;
         while let Some((index, c)) = iter.next() {
@@ -87,11 +89,7 @@ impl Inner {
                 if let Some((_, string)) = &mut self.string {
                     // 文字列の途中．
                     string.push(match c {
-                        '\\' => match iter
-                            .next()
-                            .ok_or(error::Error::NoCharacterAfterBackSlash(pos))?
-                            .1
-                        {
+                        '\\' => match iter.next().ok_or(Error::NoCharacterAfterBackSlash(pos))?.1 {
                             // エスケープ
                             'n' => '\n',
                             'r' => '\r',
@@ -150,26 +148,26 @@ impl Inner {
                             // トークンが区切れた．
                             let token = match prev_state {
                                 State::Identifier => match &line[start.byte()..index] {
-                                    "real" => token::Token::KeywordReal,
-                                    "boolean" => token::Token::KeywordBoolean,
-                                    "Sound" => token::Token::KeywordSound,
-                                    "string" => token::Token::KeywordString,
-                                    "if" => token::Token::KeywordIf,
-                                    "while" => token::Token::KeywordWhile,
-                                    "for" => token::Token::KeywordFor,
-                                    "let" => token::Token::KeywordLet,
-                                    "break" => token::Token::KeywordBreak,
-                                    "continue" => token::Token::KeywordContinue,
-                                    s => token::Token::Identifier(s.to_string()),
+                                    "real" => Token::KeywordReal,
+                                    "boolean" => Token::KeywordBoolean,
+                                    "Sound" => Token::KeywordSound,
+                                    "string" => Token::KeywordString,
+                                    "if" => Token::KeywordIf,
+                                    "while" => Token::KeywordWhile,
+                                    "for" => Token::KeywordFor,
+                                    "let" => Token::KeywordLet,
+                                    "break" => Token::KeywordBreak,
+                                    "continue" => Token::KeywordContinue,
+                                    s => Token::Identifier(s.to_string()),
                                 },
                                 State::Parameter => {
-                                    token::Token::Parameter(line[start.byte()..index].to_string())
+                                    Token::Parameter(line[start.byte()..index].to_string())
                                 }
                                 State::Integer | State::Decimal | State::Scientific => {
                                     match line[start.byte()..index].parse() {
-                                        Ok(value) => token::Token::Number(value),
+                                        Ok(value) => Token::Number(value),
                                         Err(err) => {
-                                            return Err(error::Error::ParseFloatError(
+                                            return Err(Error::ParseFloatError(
                                                 pos::Range::new(start, pos),
                                                 err,
                                             ))
@@ -177,48 +175,44 @@ impl Inner {
                                     }
                                 }
                                 State::ScientificIncomplete | State::ScientificSign => {
-                                    return Err(error::Error::IncompleteScientificNotation(
+                                    return Err(Error::IncompleteScientificNotation(
                                         pos::Range::new(start, pos),
                                     ));
                                 }
-                                State::String(string) => token::Token::String(string),
-                                State::Plus => token::Token::Plus,
-                                State::Minus => token::Token::Minus,
-                                State::Asterisk => token::Token::Asterisk,
-                                State::Slash => token::Token::Slash,
-                                State::Percent => token::Token::Percent,
-                                State::Circumflex => token::Token::Circumflex,
-                                State::Equal => token::Token::Equal,
-                                State::RightArrow => token::Token::RightArrow,
-                                State::DoubleEqual => token::Token::DoubleEqual,
-                                State::Exclamation => token::Token::Exclamation,
-                                State::ExclamationEqual => token::Token::ExclamationEqual,
-                                State::Less => token::Token::Less,
-                                State::DoubleLess => token::Token::DoubleLess,
-                                State::Greater => token::Token::Greater,
-                                State::DoubleGreater => token::Token::DoubleGreater,
-                                State::DoubleAmpersand => token::Token::DoubleAmpersand,
-                                State::Bar => token::Token::Bar,
-                                State::DoubleBar => token::Token::DoubleBar,
-                                State::Colon => token::Token::Colon,
-                                State::Semicolon => token::Token::Semicolon,
-                                State::Comma => token::Token::Comma,
-                                State::Question => token::Token::Question,
-                                State::OpeningParenthesis => token::Token::OpeningParenthesis,
-                                State::ClosingParenthesis => token::Token::ClosingParenthesis,
-                                State::OpeningBracket => token::Token::OpeningBracket,
-                                State::ClosingBracket => token::Token::ClosingBracket,
-                                State::OpeningBrace => token::Token::OpeningBrace,
-                                State::ClosingBrace => token::Token::ClosingBrace,
+                                State::String(string) => Token::String(string),
+                                State::Plus => Token::Plus,
+                                State::Minus => Token::Minus,
+                                State::Asterisk => Token::Asterisk,
+                                State::Slash => Token::Slash,
+                                State::Percent => Token::Percent,
+                                State::Circumflex => Token::Circumflex,
+                                State::Equal => Token::Equal,
+                                State::RightArrow => Token::RightArrow,
+                                State::DoubleEqual => Token::DoubleEqual,
+                                State::Exclamation => Token::Exclamation,
+                                State::ExclamationEqual => Token::ExclamationEqual,
+                                State::Less => Token::Less,
+                                State::DoubleLess => Token::DoubleLess,
+                                State::Greater => Token::Greater,
+                                State::DoubleGreater => Token::DoubleGreater,
+                                State::DoubleAmpersand => Token::DoubleAmpersand,
+                                State::Bar => Token::Bar,
+                                State::DoubleBar => Token::DoubleBar,
+                                State::Colon => Token::Colon,
+                                State::Semicolon => Token::Semicolon,
+                                State::Comma => Token::Comma,
+                                State::Question => Token::Question,
+                                State::OpeningParenthesis => Token::OpeningParenthesis,
+                                State::ClosingParenthesis => Token::ClosingParenthesis,
+                                State::OpeningBracket => Token::OpeningBracket,
+                                State::ClosingBracket => Token::ClosingBracket,
+                                State::OpeningBrace => Token::OpeningBrace,
+                                State::ClosingBrace => Token::ClosingBrace,
                                 State::Ampersand => {
-                                    return Err(error::Error::SingleAmpersand(pos::Range::new(
-                                        start, pos,
-                                    )))
+                                    return Err(Error::SingleAmpersand(pos::Range::new(start, pos)))
                                 }
                                 State::Dot => {
-                                    return Err(error::Error::SingleDot(pos::Range::new(
-                                        start, pos,
-                                    )))
+                                    return Err(Error::SingleDot(pos::Range::new(start, pos)))
                                 }
                             };
                             // queue への push_back を行うのはここ 1 箇所だけ．
@@ -234,13 +228,13 @@ impl Inner {
             };
         }
         if prev.is_some() {
-            Err(error::Error::NoLineFeedAtEOF)
+            Err(Error::NoLineFeedAtEOF)
         } else {
             Ok(())
         }
     }
     /// None からの遷移
-    fn begin(&mut self, pos: pos::Pos, c: char) -> Result<Option<(pos::Pos, State)>, error::Error> {
+    fn begin(&mut self, pos: pos::Pos, c: char) -> Result<Option<(pos::Pos, State)>, Error> {
         let state = match c {
             'a'..='z' | 'A'..='Z' | '_' => State::Identifier,
             '$' => State::Parameter,
@@ -275,7 +269,7 @@ impl Inner {
             '{' => State::OpeningBrace,
             '}' => State::ClosingBrace,
             _ if c.is_ascii_whitespace() => return Ok(None),
-            _ => return Err(error::Error::UnexpectedCharacter(pos)),
+            _ => return Err(Error::UnexpectedCharacter(pos)),
         };
         Ok(Some((pos, state)))
     }
@@ -361,7 +355,7 @@ pub struct Lexer<BufRead> {
     prompt: bool,
     inner: Inner,
     /// トークンの入っているキュー
-    queue: VecDeque<(pos::Range, token::Token)>,
+    queue: VecDeque<(pos::Range, Token)>,
 }
 
 impl<BufRead> Lexer<BufRead> {
@@ -384,10 +378,7 @@ impl<BufRead: std::io::BufRead> Lexer<BufRead> {
     /// - 字句解析に失敗したら，エラーを返す．
     /// - 字句解析に成功したら， `Option` に包んでトークンを返す
     ///   （ `None` は，ファイル終端に達し全てのトークンを読み切ったことを意味する）．
-    pub fn next(
-        &mut self,
-        log: &mut Vec<String>,
-    ) -> Result<Option<(pos::Range, token::Token)>, error::Error> {
+    pub fn next(&mut self, log: &mut Vec<String>) -> Result<Option<(pos::Range, Token)>, Error> {
         loop {
             match self.queue.pop_front() {
                 Some(token) => return Ok(Some(token)),
@@ -412,9 +403,9 @@ impl<BufRead: std::io::BufRead> Lexer<BufRead> {
                     } else {
                         // ファイルの末尾に達した．
                         return if let Some(pos) = self.inner.comment.pop() {
-                            Err(error::Error::UnterminatedComment(pos))
+                            Err(Error::UnterminatedComment(pos))
                         } else if let Some((pos, _)) = self.inner.string.take() {
-                            Err(error::Error::UnterminatedStringLiteral(pos))
+                            Err(Error::UnterminatedStringLiteral(pos))
                         } else {
                             Ok(None)
                         };

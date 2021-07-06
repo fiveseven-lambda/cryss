@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use crate::{sound, value};
+use crate::sound::Sound;
+use crate::value::Value;
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -9,15 +10,15 @@ type RcRefCell<T> = Rc<RefCell<T>>;
 
 pub struct Function {
     pub body: Body,
-    pub arguments: Vec<value::Value>,
-    pub named_arguments: HashMap<String, value::Value>,
+    pub arguments: Vec<Value>,
+    pub named_arguments: HashMap<String, Value>,
 }
 
 impl Function {
     pub fn primitive_real_1(fnc: fn(f64) -> f64) -> Function {
         let x = Rc::new(Cell::new(0.));
         Function {
-            arguments: vec![value::Value::Real(x.clone())],
+            arguments: vec![Value::Real(x.clone())],
             named_arguments: HashMap::new(),
             body: Body::Real(Rc::new(RealFunction::Primitive1(fnc, x))),
         }
@@ -26,7 +27,7 @@ impl Function {
         let x = Rc::new(Cell::new(0.));
         let y = Rc::new(Cell::new(0.));
         Function {
-            arguments: vec![value::Value::Real(x.clone()), value::Value::Real(y.clone())],
+            arguments: vec![Value::Real(x.clone()), Value::Real(y.clone())],
             named_arguments: HashMap::new(),
             body: Body::Real(Rc::new(RealFunction::Primitive2(fnc, x, y))),
         }
@@ -34,7 +35,7 @@ impl Function {
     pub fn sin() -> Function {
         let x = Rc::new(Cell::new(0.));
         Function {
-            arguments: vec![value::Value::Real(x.clone())],
+            arguments: vec![Value::Real(x.clone())],
             named_arguments: HashMap::new(),
             body: Body::Sound(Rc::new(SoundFunction::Sin(x))),
         }
@@ -42,7 +43,7 @@ impl Function {
     pub fn exp() -> Function {
         let x = Rc::new(Cell::new(0.));
         Function {
-            arguments: vec![value::Value::Real(x.clone())],
+            arguments: vec![Value::Real(x.clone())],
             named_arguments: HashMap::new(),
             body: Body::Sound(Rc::new(SoundFunction::Exp(x))),
         }
@@ -53,25 +54,25 @@ impl Function {
         let t1 = Rc::new(Cell::new(0.));
         Function {
             arguments: vec![
-                value::Value::Real(x0.clone()),
-                value::Value::Real(x1.clone()),
-                value::Value::Real(t1.clone()),
+                Value::Real(x0.clone()),
+                Value::Real(x1.clone()),
+                Value::Real(t1.clone()),
             ],
-            named_arguments: vec![("t".to_string(), value::Value::Real(t1.clone()))]
+            named_arguments: vec![("t".to_string(), Value::Real(t1.clone()))]
                 .into_iter()
                 .collect(),
             body: Body::Sound(Rc::new(SoundFunction::Linear(x0, x1, t1))),
         }
     }
     pub fn write() -> Function {
-        let sound = Rc::new(RefCell::new(sound::Sound::Const(0.)));
+        let sound = Rc::new(RefCell::new(Sound::Const(0.)));
         let time = Rc::new(Cell::new(0.));
         let filename = Rc::new(RefCell::new("".to_string()));
         Function {
             arguments: vec![
-                value::Value::Sound(sound.clone()),
-                value::Value::Real(time.clone()),
-                value::Value::String(filename.clone()),
+                Value::Sound(sound.clone()),
+                Value::Real(time.clone()),
+                Value::String(filename.clone()),
             ],
             named_arguments: HashMap::new(),
             body: Body::Void(Rc::new(VoidFunction::Write(sound, time, filename))),
@@ -116,9 +117,9 @@ pub enum SoundFunction {
 }
 
 impl SoundFunction {
-    pub fn evaluate(&self) -> sound::Sound {
+    pub fn evaluate(&self) -> Sound {
         match self {
-            SoundFunction::Sin(frequency) => sound::Sound::Sin {
+            SoundFunction::Sin(frequency) => Sound::Sin {
                 frequency: frequency.get(),
                 phase: 0.,
             },
@@ -126,12 +127,12 @@ impl SoundFunction {
                 let x0 = x0.get();
                 let x1 = x1.get();
                 let t1 = t1.get();
-                sound::Sound::Linear {
+                Sound::Linear {
                     slope: (x1 - x0) / t1,
                     intercept: x0,
                 }
             }
-            SoundFunction::Exp(time) => sound::Sound::Exp {
+            SoundFunction::Exp(time) => Sound::Exp {
                 coefficient: 1. / time.get(),
                 intercept: 1.,
             },
@@ -147,7 +148,7 @@ impl StringFunction {
 }
 
 pub enum VoidFunction {
-    Write(RcRefCell<sound::Sound>, RcCell<f64>, RcRefCell<String>),
+    Write(RcRefCell<Sound>, RcCell<f64>, RcRefCell<String>),
 }
 impl VoidFunction {
     pub fn evaluate(&self) {

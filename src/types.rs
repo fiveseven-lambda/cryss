@@ -8,8 +8,9 @@ pub enum Type {
     Void,
 }
 
-impl std::fmt::Display for Type {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+use std::fmt::{Display, Formatter, Result as FResult};
+impl Display for Type {
+    fn fmt(&self, f: &mut Formatter) -> FResult {
         match self {
             Type::Real => write!(f, "real"),
             Type::Boolean => write!(f, "boolean"),

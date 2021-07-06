@@ -3,7 +3,10 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use crate::{function, sound, types};
+use crate::types;
+
+use crate::function::{BooleanFunction, RealFunction, SoundFunction, StringFunction, VoidFunction};
+use crate::sound::{self, Sound};
 
 type RcCell<T> = Rc<Cell<T>>;
 type RcRefCell<T> = Rc<RefCell<T>>;
@@ -68,7 +71,7 @@ impl Expression {
 pub enum Argument {
     Real(RcCell<f64>, RealExpression),
     Boolean(RcCell<bool>, BooleanExpression),
-    Sound(RcRefCell<sound::Sound>, SoundExpression),
+    Sound(RcRefCell<Sound>, SoundExpression),
     String(RcRefCell<String>, StringExpression),
 }
 
@@ -104,7 +107,7 @@ pub enum RealExpression {
     Div(Box<RealExpression>, Box<RealExpression>),
     Rem(Box<RealExpression>, Box<RealExpression>),
     Pow(Box<RealExpression>, Box<RealExpression>),
-    Invocation(Rc<function::RealFunction>, Vec<Argument>),
+    Invocation(Rc<RealFunction>, Vec<Argument>),
 }
 
 impl RealExpression {
@@ -146,7 +149,7 @@ pub enum BooleanExpression {
     StringNotEqual(Box<StringExpression>, Box<StringExpression>),
     And(Box<BooleanExpression>, Box<BooleanExpression>),
     Or(Box<BooleanExpression>, Box<BooleanExpression>),
-    Invocation(Rc<function::BooleanFunction>, Vec<Argument>),
+    Invocation(Rc<BooleanFunction>, Vec<Argument>),
 }
 
 impl BooleanExpression {
@@ -181,7 +184,7 @@ impl BooleanExpression {
 
 #[derive(Clone)]
 pub enum SoundExpression {
-    Reference(RcRefCell<sound::Sound>),
+    Reference(RcRefCell<Sound>),
     Play(Box<SoundExpression>),
     Real(RealExpression),
     Minus(Box<SoundExpression>),
@@ -194,24 +197,24 @@ pub enum SoundExpression {
     Pow(Box<SoundExpression>, Box<SoundExpression>),
     LeftShift(Box<SoundExpression>, Box<RealExpression>),
     RightShift(Box<SoundExpression>, Box<RealExpression>),
-    Invocation(Rc<function::SoundFunction>, Vec<Argument>),
+    Invocation(Rc<SoundFunction>, Vec<Argument>),
     Apply(
-        Rc<function::RealFunction>,
+        Rc<RealFunction>,
         Vec<Argument>,
         Vec<(RcCell<f64>, SoundExpression)>,
     ),
 }
 
 impl SoundExpression {
-    fn evaluate(self) -> sound::Sound {
+    fn evaluate(self) -> Sound {
         match self {
             SoundExpression::Reference(rc) => rc.borrow().clone(),
             SoundExpression::Invocation(fnc, arguments) => {
                 arguments.into_iter().for_each(Argument::set);
                 fnc.evaluate()
             }
-            SoundExpression::Real(expr) => sound::Sound::Const(expr.evaluate()),
-            SoundExpression::Apply(fnc, arguments, sounds) => sound::Sound::Apply(
+            SoundExpression::Real(expr) => Sound::Const(expr.evaluate()),
+            SoundExpression::Apply(fnc, arguments, sounds) => Sound::Apply(
                 fnc.clone(),
                 arguments.into_iter().map(Argument::evaluate).collect(),
                 sounds
@@ -220,25 +223,25 @@ impl SoundExpression {
                     .collect(),
             ),
             SoundExpression::Play(expr) => expr.evaluate(),
-            SoundExpression::Minus(expr) => sound::Sound::Minus(expr.evaluate().into()),
-            SoundExpression::Reciprocal(expr) => sound::Sound::Reciprocal(expr.evaluate().into()),
+            SoundExpression::Minus(expr) => Sound::Minus(expr.evaluate().into()),
+            SoundExpression::Reciprocal(expr) => Sound::Reciprocal(expr.evaluate().into()),
             SoundExpression::Add(left, right) => {
-                sound::Sound::Add(left.evaluate().into(), right.evaluate().into())
+                Sound::Add(left.evaluate().into(), right.evaluate().into())
             }
             SoundExpression::Sub(left, right) => {
-                sound::Sound::Sub(left.evaluate().into(), right.evaluate().into())
+                Sound::Sub(left.evaluate().into(), right.evaluate().into())
             }
             SoundExpression::Mul(left, right) => {
-                sound::Sound::Mul(left.evaluate().into(), right.evaluate().into())
+                Sound::Mul(left.evaluate().into(), right.evaluate().into())
             }
             SoundExpression::Div(left, right) => {
-                sound::Sound::Div(left.evaluate().into(), right.evaluate().into())
+                Sound::Div(left.evaluate().into(), right.evaluate().into())
             }
             SoundExpression::Rem(left, right) => {
-                sound::Sound::Rem(left.evaluate().into(), right.evaluate().into())
+                Sound::Rem(left.evaluate().into(), right.evaluate().into())
             }
             SoundExpression::Pow(left, right) => {
-                sound::Sound::Pow(left.evaluate().into(), right.evaluate().into())
+                Sound::Pow(left.evaluate().into(), right.evaluate().into())
             }
             SoundExpression::LeftShift(left, right) => left.evaluate().shift(right.evaluate()),
             SoundExpression::RightShift(left, right) => left.evaluate().shift(-right.evaluate()),
@@ -252,7 +255,7 @@ pub enum StringExpression {
     Reference(RcRefCell<String>),
     Print(Box<StringExpression>),
     Add(Box<StringExpression>, Box<StringExpression>),
-    Invocation(Rc<function::StringFunction>, Vec<Argument>),
+    Invocation(Rc<StringFunction>, Vec<Argument>),
 }
 
 impl StringExpression {
@@ -275,7 +278,7 @@ impl StringExpression {
 }
 #[derive(Clone)]
 pub enum VoidExpression {
-    Invocation(Rc<function::VoidFunction>, Vec<Argument>),
+    Invocation(Rc<VoidFunction>, Vec<Argument>),
 }
 impl VoidExpression {
     fn evaluate(self) {
@@ -293,7 +296,7 @@ pub enum Statement {
     Expression(Option<Expression>),
     RealSubstitution(RcCell<f64>, RealExpression),
     BooleanSubstitution(RcCell<bool>, BooleanExpression),
-    SoundSubstitution(RcRefCell<sound::Sound>, SoundExpression),
+    SoundSubstitution(RcRefCell<Sound>, SoundExpression),
     StringSubstitution(RcRefCell<String>, StringExpression),
     While(BooleanExpression, Box<Statement>),
     If(BooleanExpression, Box<Statement>),

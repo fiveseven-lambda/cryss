@@ -1,6 +1,6 @@
 //! Sound
 
-use crate::function;
+use crate::function::RealFunction;
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
@@ -34,18 +34,9 @@ impl Argument {
 #[allow(unused)]
 pub enum Sound {
     Const(f64),
-    Linear {
-        slope: f64,
-        intercept: f64,
-    }, // x = at + b
-    Sin {
-        frequency: f64,
-        phase: f64,
-    }, // x = sin(τft + θ)
-    Exp {
-        coefficient: f64,
-        intercept: f64,
-    }, // x = ae^(bt)
+    Linear { slope: f64, intercept: f64 },    // x = at + b
+    Sin { frequency: f64, phase: f64 },       // x = sin(τft + θ)
+    Exp { coefficient: f64, intercept: f64 }, // x = ae^(bt)
     Rand,
     Minus(Box<Sound>),
     Reciprocal(Box<Sound>),
@@ -55,11 +46,7 @@ pub enum Sound {
     Div(Box<Sound>, Box<Sound>),
     Pow(Box<Sound>, Box<Sound>),
     Rem(Box<Sound>, Box<Sound>),
-    Apply(
-        Rc<function::RealFunction>,
-        Vec<Argument>,
-        Vec<(RcCell<f64>, Sound)>,
-    ),
+    Apply(Rc<RealFunction>, Vec<Argument>, Vec<(RcCell<f64>, Sound)>),
 }
 
 impl Sound {
@@ -177,7 +164,7 @@ pub enum SoundIter {
     Pow(Box<SoundIter>, Box<SoundIter>),
     Rem(Box<SoundIter>, Box<SoundIter>),
     Apply(
-        Rc<function::RealFunction>,
+        Rc<RealFunction>,
         Vec<Argument>,
         Vec<(RcCell<f64>, SoundIter)>,
     ),
