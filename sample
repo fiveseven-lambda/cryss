@@ -1,3 +1,6 @@
+write(Linear(0, 440, 1) % 1, 1, "saw.wav");               // のこぎり波
+write(floor(Linear(0, 2 * 440, 1) % 2), 1, "square.wav"); // 矩形波
+
 let Adsr =
     .5 * (Sin(440) + Sin(660))    // 440 Hz （ラ）と 660 Hz （ミ）
     * min(1, Linear(0, 50, 1))    // アタック

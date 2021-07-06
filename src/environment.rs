@@ -51,6 +51,8 @@ impl Environment {
         functions.insert("tan".to_string(), Function::primitive_real_1(f64::tan));
         functions.insert("exp".to_string(), Function::primitive_real_1(f64::exp));
         functions.insert("log".to_string(), Function::primitive_real_1(f64::ln));
+        functions.insert("floor".to_string(), Function::primitive_real_1(f64::floor));
+        functions.insert("ceil".to_string(), Function::primitive_real_1(f64::ceil));
         functions.insert("max".to_string(), Function::primitive_real_2(f64::max));
         functions.insert("min".to_string(), Function::primitive_real_2(f64::min));
         functions.insert("Sin".to_string(), Function::sin());
