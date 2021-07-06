@@ -42,6 +42,7 @@ impl Expression {
             Expression::Void(_) => types::Type::Void,
         }
     }
+    /// これ `&self` ではなく `self` にしたい
     pub fn evaluate(&self) {
         match self {
             Expression::Real(expr) => {
@@ -201,6 +202,7 @@ impl SoundExpression {
                 arguments.iter().for_each(Argument::set);
                 fnc.evaluate()
             }
+            SoundExpression::Real(expr) => sound::Sound::Const(expr.evaluate()),
             SoundExpression::Apply(fnc, arguments, sounds) => sound::Sound::Apply(
                 fnc.clone(),
                 arguments.iter().map(Argument::evaluate).collect(),
@@ -209,7 +211,29 @@ impl SoundExpression {
                     .map(|(rc, expr)| (rc.clone(), expr.evaluate()))
                     .collect(),
             ),
-            _ => todo!(),
+            SoundExpression::Play(expr) => expr.evaluate(),
+            SoundExpression::Minus(expr) => sound::Sound::Minus(expr.evaluate().into()),
+            SoundExpression::Reciprocal(expr) => sound::Sound::Reciprocal(expr.evaluate().into()),
+            SoundExpression::Add(left, right) => {
+                sound::Sound::Add(left.evaluate().into(), right.evaluate().into())
+            }
+            SoundExpression::Sub(left, right) => {
+                sound::Sound::Sub(left.evaluate().into(), right.evaluate().into())
+            }
+            SoundExpression::Mul(left, right) => {
+                sound::Sound::Mul(left.evaluate().into(), right.evaluate().into())
+            }
+            SoundExpression::Div(left, right) => {
+                sound::Sound::Div(left.evaluate().into(), right.evaluate().into())
+            }
+            SoundExpression::Rem(left, right) => {
+                sound::Sound::Rem(left.evaluate().into(), right.evaluate().into())
+            }
+            SoundExpression::Pow(left, right) => {
+                sound::Sound::Pow(left.evaluate().into(), right.evaluate().into())
+            }
+            SoundExpression::LeftShift(left, right) => left.evaluate().shift(right.evaluate()),
+            SoundExpression::RightShift(left, right) => left.evaluate().shift(-right.evaluate()),
         }
     }
 }

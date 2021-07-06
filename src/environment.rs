@@ -65,6 +65,7 @@ impl Environment {
         );
         functions.insert("Sin".to_string(), function::Function::sin());
         functions.insert("Linear".to_string(), function::Function::linear());
+        functions.insert("Exp".to_string(), function::Function::exp());
         functions.insert("write".to_string(), function::Function::write());
         Environment {
             variables,

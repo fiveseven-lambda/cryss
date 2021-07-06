@@ -26,7 +26,7 @@ impl Function {
         let x = Rc::new(Cell::new(0.));
         let y = Rc::new(Cell::new(0.));
         Function {
-            arguments: vec![value::Value::Real(x.clone())],
+            arguments: vec![value::Value::Real(x.clone()), value::Value::Real(y.clone())],
             named_arguments: HashMap::new(),
             body: Body::Real(Rc::new(RealFunction::Primitive2(fnc, x, y))),
         }
@@ -37,6 +37,14 @@ impl Function {
             arguments: vec![value::Value::Real(x.clone())],
             named_arguments: HashMap::new(),
             body: Body::Sound(Rc::new(SoundFunction::Sin(x))),
+        }
+    }
+    pub fn exp() -> Function {
+        let x = Rc::new(Cell::new(0.));
+        Function {
+            arguments: vec![value::Value::Real(x.clone())],
+            named_arguments: HashMap::new(),
+            body: Body::Sound(Rc::new(SoundFunction::Exp(x))),
         }
     }
     pub fn linear() -> Function {
@@ -98,6 +106,7 @@ pub enum BooleanFunction {}
 pub enum SoundFunction {
     Sin(RcCell<f64>),
     Linear(RcCell<f64>, RcCell<f64>, RcCell<f64>),
+    Exp(RcCell<f64>),
 }
 
 impl SoundFunction {
@@ -116,6 +125,10 @@ impl SoundFunction {
                     intercept: x0,
                 }
             }
+            SoundFunction::Exp(time) => sound::Sound::Exp {
+                coefficient: 1. / time.get(),
+                intercept: 1.,
+            },
         }
     }
 }

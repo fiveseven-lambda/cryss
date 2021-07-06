@@ -53,6 +53,7 @@ pub enum Sound {
     Mul(Box<Sound>, Box<Sound>),
     Div(Box<Sound>, Box<Sound>),
     Pow(Box<Sound>, Box<Sound>),
+    Rem(Box<Sound>, Box<Sound>),
     Apply(
         Rc<function::RealFunction>,
         Vec<Argument>,
@@ -87,6 +88,7 @@ impl Sound {
             Sound::Mul(left, right) => Sound::Mul(left.shift(t).into(), right.shift(t).into()),
             Sound::Div(left, right) => Sound::Div(left.shift(t).into(), right.shift(t).into()),
             Sound::Pow(left, right) => Sound::Pow(left.shift(t).into(), right.shift(t).into()),
+            Sound::Rem(left, right) => Sound::Rem(left.shift(t).into(), right.shift(t).into()),
             Sound::Apply(function, arguments, sounds) => Sound::Apply(
                 function,
                 arguments,
@@ -135,6 +137,9 @@ impl Sound {
             Sound::Pow(left, right) => {
                 SoundIter::Pow(left.iter(samplerate).into(), right.iter(samplerate).into())
             }
+            Sound::Rem(left, right) => {
+                SoundIter::Rem(left.iter(samplerate).into(), right.iter(samplerate).into())
+            }
             Sound::Apply(function, arguments, sounds) => SoundIter::Apply(
                 function.clone(),
                 arguments.clone(),
@@ -169,6 +174,7 @@ pub enum SoundIter {
     Mul(Box<SoundIter>, Box<SoundIter>),
     Div(Box<SoundIter>, Box<SoundIter>),
     Pow(Box<SoundIter>, Box<SoundIter>),
+    Rem(Box<SoundIter>, Box<SoundIter>),
     Apply(
         Rc<function::RealFunction>,
         Vec<Argument>,
@@ -202,6 +208,7 @@ impl SoundIter {
             SoundIter::Sub(left, right) => left.next() - right.next(),
             SoundIter::Mul(left, right) => left.next() * right.next(),
             SoundIter::Div(left, right) => left.next() / right.next(),
+            SoundIter::Rem(left, right) => left.next() % right.next(),
             SoundIter::Pow(left, right) => left.next().powf(right.next()),
             SoundIter::Apply(fnc, arguments, sounds) => {
                 arguments.iter().for_each(Argument::set);
