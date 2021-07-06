@@ -1,6 +1,6 @@
 //! プログラム（ `mod program` ）を実行する環境
 
-use crate::{compiler, error, syntax, value};
+use crate::{compiler, error, function, syntax, value};
 use std::collections::HashMap;
 
 use std::cell::Cell;
@@ -8,6 +8,7 @@ use std::rc::Rc;
 
 pub struct Environment {
     variables: HashMap<String, value::Value>,
+    functions: HashMap<String, function::Function>,
 }
 
 impl Environment {
@@ -21,10 +22,54 @@ impl Environment {
             "false".to_string(),
             value::Value::Boolean(Rc::new(Cell::new(false))),
         );
-        Environment { variables }
+        variables.insert(
+            "PI".to_string(),
+            value::Value::Real(Rc::new(Cell::new(std::f64::consts::PI))),
+        );
+        variables.insert(
+            "E".to_string(),
+            value::Value::Real(Rc::new(Cell::new(std::f64::consts::PI))),
+        );
+        let mut functions = HashMap::new();
+        functions.insert(
+            "sqrt".to_string(),
+            function::Function::primitive_real_1(f64::sqrt),
+        );
+        functions.insert(
+            "sin".to_string(),
+            function::Function::primitive_real_1(f64::sin),
+        );
+        functions.insert(
+            "cos".to_string(),
+            function::Function::primitive_real_1(f64::cos),
+        );
+        functions.insert(
+            "tan".to_string(),
+            function::Function::primitive_real_1(f64::tan),
+        );
+        functions.insert(
+            "exp".to_string(),
+            function::Function::primitive_real_1(f64::exp),
+        );
+        functions.insert(
+            "log".to_string(),
+            function::Function::primitive_real_1(f64::ln),
+        );
+        functions.insert(
+            "max".to_string(),
+            function::Function::primitive_real_2(f64::max),
+        );
+        functions.insert(
+            "min".to_string(),
+            function::Function::primitive_real_2(f64::min),
+        );
+        Environment {
+            variables,
+            functions,
+        }
     }
     pub fn run(&mut self, statement: syntax::Statement) -> Result<(), error::Error> {
-        compiler::compile_statement(statement, &mut self.variables)?.run();
+        compiler::compile_statement(statement, &mut self.variables, &mut self.functions)?.run();
         Ok(())
     }
 }

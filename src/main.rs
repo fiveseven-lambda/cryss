@@ -3,6 +3,7 @@
 mod compiler;
 mod environment;
 mod error;
+mod function;
 mod lexer;
 mod parser;
 mod pos;

@@ -3,7 +3,7 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 
-use crate::{error, pos, sound, types};
+use crate::{function, sound, types};
 
 type RcCell<T> = Rc<Cell<T>>;
 type RcRefCell<T> = Rc<RefCell<T>>;
@@ -63,6 +63,24 @@ impl Expression {
     }
 }
 
+pub enum Argument {
+    Real(RcCell<f64>, RealExpression),
+    Boolean(RcCell<bool>, BooleanExpression),
+    Sound(RcRefCell<sound::Sound>, SoundExpression),
+    String(RcRefCell<String>, StringExpression),
+}
+
+impl Argument {
+    fn set(&self) {
+        match self {
+            Argument::Real(rc, expr) => rc.set(expr.evaluate()),
+            Argument::Boolean(rc, expr) => rc.set(expr.evaluate()),
+            Argument::Sound(rc, expr) => *rc.borrow_mut() = expr.evaluate(),
+            Argument::String(rc, expr) => *rc.borrow_mut() = expr.evaluate(),
+        }
+    }
+}
+
 pub enum RealExpression {
     Const(f64),
     Reference(RcCell<f64>),
@@ -75,7 +93,7 @@ pub enum RealExpression {
     Div(Box<RealExpression>, Box<RealExpression>),
     Rem(Box<RealExpression>, Box<RealExpression>),
     Pow(Box<RealExpression>, Box<RealExpression>),
-    Invocation(),
+    Invocation(Rc<function::RealFunction>, Vec<Argument>),
 }
 
 impl RealExpression {
@@ -96,7 +114,10 @@ impl RealExpression {
             RealExpression::Div(left, right) => left.evaluate() / right.evaluate(),
             RealExpression::Rem(left, right) => left.evaluate() % right.evaluate(),
             RealExpression::Pow(left, right) => left.evaluate().powf(right.evaluate()),
-            RealExpression::Invocation() => todo!(),
+            RealExpression::Invocation(fnc, arguments) => {
+                arguments.iter().for_each(Argument::set);
+                fnc.evaluate()
+            }
         }
     }
 }

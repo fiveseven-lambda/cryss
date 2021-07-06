@@ -17,6 +17,7 @@ pub enum Error {
     EmptyArgumentName(pos::Range),
     InvalidArgumentName(pos::Range, pos::Range),
     UndefinedVariable(String, pos::Range),
+    UndefinedFunction(String, pos::Range),
     CannotPrint(pos::Range),
     EmptyOperandUnary(pos::Range),
     EmptyOperand(pos::Range),
@@ -29,6 +30,8 @@ pub enum Error {
     TypeMismatchUnary(pos::Range, types::Type),
     TypeMismatchBinary(pos::Range, types::Type, pos::Range, types::Type),
     TypeMismatchCond(pos::Range, types::Type),
+    WrongNumberOfArguments(pos::Range, usize, usize),
+    TypeMismatchArgument(pos::Range, types::Type),
     LHSNotIdentifier(pos::Range, pos::Range),
     RHSNotIdentifier(pos::Range, pos::Range),
     RHSNotIdentifierLet(pos::Range, pos::Range, pos::Range),
@@ -107,6 +110,10 @@ impl Error {
                 println!("undefined variable {} at {}", name, range);
                 range.print(log);
             }
+            Error::UndefinedFunction(name, range) => {
+                println!("undefined function {} at {}", name, range);
+                range.print(log);
+            }
             Error::CannotPrint(range) => {
                 println!("cannot apply `?` (at {})", range);
                 range.print(log);
@@ -154,6 +161,17 @@ impl Error {
             Error::TypeMismatchCond(cond, ty) => {
                 println!("type mismatch at {} (found {})", cond, ty);
                 cond.print(log);
+            }
+            Error::WrongNumberOfArguments(range, expected, found) => {
+                println!(
+                    "wrong number of arguments at {} (expected {}, found {})",
+                    range, expected, found
+                );
+                range.print(log);
+            }
+            Error::TypeMismatchArgument(arg, ty) => {
+                println!("type mismatch at {} (found {})", arg, ty);
+                arg.print(log);
             }
             Error::NoSemicolonAtEndOfStatement(range) => {
                 println!("no semicolon at end of statement ({})", range);

@@ -1,11 +1,10 @@
 use std::cell::{Cell, RefCell};
-use std::collections::HashMap;
 use std::rc::Rc;
 
 type RcCell<T> = Rc<Cell<T>>;
 type RcRefCell<T> = Rc<RefCell<T>>;
 
-use crate::{program, sound, types};
+use crate::{sound, types};
 
 /// ループ中で書き換えられるために RcCell で包む
 #[derive(Clone)]
