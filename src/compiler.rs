@@ -384,15 +384,19 @@ pub fn compile_statement(
             let stmt = compile_statement(*stmt, copied, functions)?;
             program::Statement::While(cond, stmt.into())
         }
-        syntax::Statement::If(expr, stmt) => {
+        syntax::Statement::If(expr, stmt1, stmt2) => {
             let cond = compile_expression(expr, variables, functions)?;
             let cond = match cond.0 {
                 program::Expression::Boolean(expr) => expr,
                 other => return Err(Error::TypeMismatchCond(cond.1, other.ty())),
             };
             let copied = &mut variables.clone();
-            let stmt = compile_statement(*stmt, copied, functions)?;
-            program::Statement::If(cond, stmt.into())
+            let stmt1 = compile_statement(*stmt1, copied, functions)?;
+            let copied = &mut variables.clone();
+            let stmt2 = stmt2
+                .map(|stmt| compile_statement(stmt, copied, functions))
+                .transpose()?;
+            program::Statement::If(cond, stmt1.into(), stmt2.into())
         }
         _ => todo!(),
     })

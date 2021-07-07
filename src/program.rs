@@ -299,7 +299,7 @@ pub enum Statement {
     SoundSubstitution(RcRefCell<Sound>, SoundExpression),
     StringSubstitution(RcRefCell<String>, StringExpression),
     While(BooleanExpression, Box<Statement>),
-    If(BooleanExpression, Box<Statement>),
+    If(BooleanExpression, Box<Statement>, Box<Option<Statement>>),
     Block(Vec<Statement>),
 }
 
@@ -326,9 +326,11 @@ impl Statement {
                     stmt.clone().run();
                 }
             }
-            Statement::If(cond, stmt) => {
+            Statement::If(cond, stmt1, stmt2) => {
                 if cond.evaluate() {
-                    stmt.run();
+                    stmt1.run();
+                } else {
+                    stmt2.map(Statement::run);
                 }
             }
             Statement::Block(vec) => {

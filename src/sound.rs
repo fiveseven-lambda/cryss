@@ -183,7 +183,11 @@ impl SoundIter {
     pub fn next(&mut self) -> f64 {
         match self {
             SoundIter::Const(value) => *value,
-            SoundIter::Linear { first, difference, counter } => {
+            SoundIter::Linear {
+                first,
+                difference,
+                counter,
+            } => {
                 let ret = *first + *difference * *counter as f64;
                 *counter += 1;
                 ret

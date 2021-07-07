@@ -322,7 +322,8 @@ fn parse_statement_or_token(
         }
         (None, Some((r#if, Token::KeywordIf))) => {
             let (condition, body) = parse_if_while(lexer, log, r#if)?;
-            Ok(Statement::If(condition, body.into()).into())
+            // todo: else 文
+            Ok(Statement::If(condition, body.into(), None.into()).into())
         }
         (None, Some((r#while, Token::KeywordWhile))) => {
             let (condition, body) = parse_if_while(lexer, log, r#while)?;
