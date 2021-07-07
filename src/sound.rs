@@ -96,8 +96,9 @@ impl Sound {
         match self {
             Sound::Const(value) => SoundIter::Const(value),
             Sound::Linear { slope, intercept } => SoundIter::Linear {
-                next: intercept,
+                first: intercept,
                 difference: slope / samplerate,
+                counter: 0,
             },
             Sound::Sin { frequency, phase } => SoundIter::Sin {
                 next: Complex64::from_polar(1., phase),
@@ -148,8 +149,9 @@ impl Sound {
 pub enum SoundIter {
     Const(f64),
     Linear {
-        next: f64,
+        first: f64,
         difference: f64,
+        counter: i64,
     },
     Exp {
         next: f64,
@@ -181,9 +183,9 @@ impl SoundIter {
     pub fn next(&mut self) -> f64 {
         match self {
             SoundIter::Const(value) => *value,
-            SoundIter::Linear { next, difference } => {
-                let ret = *next;
-                *next += *difference;
+            SoundIter::Linear { first, difference, counter } => {
+                let ret = *first + *difference * *counter as f64;
+                *counter += 1;
                 ret
             }
             SoundIter::Sin { next, ratio } => {
