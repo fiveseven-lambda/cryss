@@ -31,16 +31,12 @@ pub enum Error {
     WrongNumberOfArguments(pos::Range, usize, usize),
     TypeMismatchArgument(pos::Range, Type),
     LHSNotIdentifier(pos::Range, pos::Range),
-    RHSNotIdentifier(pos::Range, pos::Range),
-    RHSNotIdentifierLet(pos::Range, pos::Range, pos::Range),
     NoSemicolonAtEndOfStatement(pos::Range),
     UnexpectedToken(pos::Range),
-    NoSubstitutionAfterLet(pos::Range, Option<pos::Range>, Option<pos::Range>),
+    NoSubstitutionAfterLet(pos::Range),
     UnexpectedTokenAfterKeyword(pos::Range, pos::Range),
     UnexpectedEOFAfterKeyword(pos::Range),
     UnexpectedEOFAfterCondition(pos::Range, pos::Range),
-    UnexpectedEOFAfterRightArrow(pos::Range),
-    UnexpectedEOFAfterRightArrowLet(pos::Range, pos::Range),
     VoidRHS(pos::Range),
 }
 
@@ -173,41 +169,13 @@ impl Error {
                 println!("before `=` at {}", equal);
                 equal.print(log);
             }
-            Error::RHSNotIdentifier(range, arrow) => {
-                println!("identifier required at {}", range);
-                range.print(log);
-                println!("after `=>` at {}", arrow);
-                arrow.print(log);
-            }
-            Error::RHSNotIdentifierLet(range, arrow, r#let) => {
-                println!("identifier required at {}", range);
-                range.print(log);
-                println!("after `=>` at {}", arrow);
-                arrow.print(log);
-                println!("and `let` at {}", r#let);
-                r#let.print(log);
-            }
             Error::EmptyRHS(equal) => {
                 println!("empty expression after `=` at {}", equal);
                 equal.print(log);
             }
-            Error::NoSubstitutionAfterLet(r#let, expr, end) => {
+            Error::NoSubstitutionAfterLet(r#let) => {
                 println!("no substitution after `let` at {}", r#let);
                 r#let.print(log);
-                match expr {
-                    Some(expr) => {
-                        println!("right hand side at {}", expr);
-                        expr.print(log);
-                    }
-                    None => println!("right hand side is empty"),
-                }
-                match end {
-                    Some(end) => {
-                        println!("unexpected token at {}", end);
-                        end.print(log);
-                    }
-                    None => println!("unexpected end of file"),
-                }
             }
             Error::UnexpectedTokenAfterKeyword(keyword, token) => {
                 println!("unexpected token at {}", token);
@@ -224,16 +192,6 @@ impl Error {
                 keyword.print(log);
                 println!("and condition at {}", condition);
                 condition.print(log);
-            }
-            Error::UnexpectedEOFAfterRightArrow(keyword) => {
-                println!("unexpected end of file after right arrow at {}", keyword);
-                keyword.print(log);
-            }
-            Error::UnexpectedEOFAfterRightArrowLet(arrow, r#let) => {
-                println!("unexpected end of file after right arrow at {}", arrow);
-                arrow.print(log);
-                println!("and `let` at {}", r#let);
-                r#let.print(log);
             }
             Error::VoidRHS(range) => {
                 println!("void expression at rhs {}", range);

@@ -74,7 +74,7 @@ fn parse_factor(
             (_, Some((range, _))) => return Err(Error::UnclosedBracketUntil(open, range)),
             (_, None) => return Err(Error::UnclosedBracketUntilEOF(open)),
         },
-        Some((open, Token::OpeningBracket)) => match parse_list(lexer, log)? {
+        Some((open, Token::OpeningBracket)) => match parse_list2(lexer, log)? {
             (list, Some((close, Token::ClosingBracket))) => {
                 Expression::new(open + close, Node::Score(list))
             }
@@ -237,7 +237,7 @@ fn parse_list1(
 }
 
 /// セミコロン区切り（空のものは空の Vec として追加）
-fn parse_list(
+fn parse_list2(
     lexer: &mut lexer::Lexer<impl BufRead>,
     log: &mut Vec<String>,
 ) -> Result<Parsed<Vec<Vec<Expression>>>, Error> {
@@ -255,9 +255,9 @@ pub fn parse_statement(
     lexer: &mut lexer::Lexer<impl BufRead>,
     log: &mut Vec<String>,
 ) -> Result<Option<Statement>, Error> {
-    match parse_expression(lexer, log)? {
-        (Some(expr), Some((_, Token::Semicolon))) => Ok(Some(Statement::Expression(expr.into()))),
-        (None, Some((_, Token::Semicolon))) => Ok(Some(Statement::Expression(None))),
+    let ret = match parse_expression(lexer, log)? {
+        (Some(expr), Some((_, Token::Semicolon))) => Statement::Expression(expr.into()),
+        (None, Some((_, Token::Semicolon))) => Statement::Expression(None),
         (Some(lhs), Some((equal, Token::Equal))) => {
             let name = match lhs.node {
                 Node::Identifier(name) => name,
@@ -265,9 +265,10 @@ pub fn parse_statement(
             };
             match parse_expression(lexer, log)? {
                 (Some(expr), Some((_, Token::Semicolon))) => {
-                    Ok(Some(Statement::Substitution(lhs.range, name, expr)))
+                    Statement::Substitution(lhs.range, name, expr)
                 }
-                _ => panic!(),
+                (None, _) => return Err(Error::EmptyRHS(equal)),
+                (Some(expr), _) => return Err(Error::NoSemicolonAtEndOfStatement(expr.range)),
             }
         }
         (None, Some((r#let, Token::KeywordLet))) => match parse_expression(lexer, log)? {
@@ -278,52 +279,78 @@ pub fn parse_statement(
                 };
                 match parse_expression(lexer, log)? {
                     (Some(expr), Some((_, Token::Semicolon))) => {
-                        Ok(Some(Statement::Declaration(lhs.range, name, expr)))
+                        Statement::Declaration(lhs.range, name, expr)
                     }
-                    _ => panic!(),
+                    (None, _) => return Err(Error::EmptyRHS(equal)),
+                    (Some(expr), _) => return Err(Error::NoSemicolonAtEndOfStatement(expr.range)),
                 }
             }
-            _ => panic!(),
+            _ => return Err(Error::NoSubstitutionAfterLet(r#let)),
         },
         (None, Some((r#if, Token::KeywordIf))) => {
             let open = match lexer.next(log)? {
                 Some((open, Token::OpeningParenthesis)) => open,
-                _ => panic!(),
+                Some((other, _)) => return Err(Error::UnexpectedTokenAfterKeyword(r#if, other)),
+                None => return Err(Error::UnexpectedEOFAfterKeyword(r#if)),
             };
             let (condition, close) = match parse_expression(lexer, log)? {
                 (Some(expr), Some((close, Token::ClosingParenthesis))) => (expr, close),
                 (_, Some((range, _))) => return Err(Error::UnclosedBracketUntil(open, range)),
                 (_, None) => return Err(Error::UnclosedBracketUntilEOF(open)),
             };
-            let body_if = match parse_statement(lexer, log)? {
-                Some(statement) => statement,
-                None => panic!(),
-            };
-            let body_else =
-                if let Some(true) = lexer.ask(|token| matches!(token, Token::KeywordElse), log)? {
+            let body_if = parse_statement(lexer, log)?
+                .ok_or(Error::UnexpectedEOFAfterCondition(r#if, open + close))?;
+            let body_else = lexer
+                .ask(|token| matches!(token, Token::KeywordElse), log)?
+                .then(|| {
                     lexer.next(log)?;
                     match parse_statement(lexer, log)? {
-                        Some(statement) => Some(statement.into()),
+                        Some(statement) => Ok(statement.into()),
                         None => panic!(),
                     }
-                } else {
-                    None
-                };
-            Ok(Some(Statement::If(condition, body_if.into(), body_else)))
+                })
+                .transpose()?;
+            Statement::If(condition, body_if.into(), body_else)
+        }
+        (None, Some((r#while, Token::KeywordWhile))) => {
+            let open = match lexer.next(log)? {
+                Some((open, Token::OpeningParenthesis)) => open,
+                Some((other, _)) => return Err(Error::UnexpectedTokenAfterKeyword(r#while, other)),
+                None => return Err(Error::UnexpectedEOFAfterKeyword(r#while)),
+            };
+            let (condition, close) = match parse_expression(lexer, log)? {
+                (Some(expr), Some((close, Token::ClosingParenthesis))) => (expr, close),
+                (_, Some((range, _))) => return Err(Error::UnclosedBracketUntil(open, range)),
+                (_, None) => return Err(Error::UnclosedBracketUntilEOF(open)),
+            };
+            let body = parse_statement(lexer, log)?
+                .ok_or(Error::UnexpectedEOFAfterCondition(r#while, open + close))?;
+            Statement::While(condition, body.into())
         }
         (None, Some((open, Token::OpeningBrace))) => {
             let mut vec = Vec::new();
-            loop {
-                match lexer.ask(|token| matches!(token, Token::ClosingBrace), log)? {
-                    Some(true) => break Ok(Some(Statement::Block(vec))),
-                    Some(false) => match parse_statement(lexer, log)? {
-                        Some(statement) => vec.push(statement),
-                        None => panic!(),
-                    },
-                    None => panic!(),
+            while !lexer.ask(|token| matches!(token, Token::ClosingBrace), log)? {
+                match parse_statement(lexer, log)? {
+                    Some(statement) => vec.push(statement),
+                    None => return Err(Error::UnclosedBracketUntilEOF(open)),
                 }
             }
+            lexer.next(log)?;
+            Statement::Block(vec)
         }
-        _ => todo!(),
-    }
+        (None, Some((r#break, Token::KeywordBreak))) => match lexer.next(log)? {
+            Some((_, Token::Semicolon)) => Statement::Break,
+            Some((other, _)) => return Err(Error::UnexpectedTokenAfterKeyword(r#break, other)),
+            None => return Err(Error::UnexpectedEOFAfterKeyword(r#break)),
+        },
+        (None, Some((r#continue, Token::KeywordContinue))) => match lexer.next(log)? {
+            Some((_, Token::Semicolon)) => Statement::Continue,
+            Some((other, _)) => return Err(Error::UnexpectedTokenAfterKeyword(r#continue, other)),
+            None => return Err(Error::UnexpectedEOFAfterKeyword(r#continue)),
+        },
+        (Some(expr), _) => return Err(Error::NoSemicolonAtEndOfStatement(expr.range)),
+        (None, None) => return Ok(None),
+        (None, Some((range, _))) => return Err(Error::UnexpectedToken(range)),
+    };
+    Ok(Some(ret))
 }

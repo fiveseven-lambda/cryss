@@ -153,6 +153,7 @@ impl Inner {
                                     "Sound" => Token::KeywordSound,
                                     "string" => Token::KeywordString,
                                     "if" => Token::KeywordIf,
+                                    "else" => Token::KeywordElse,
                                     "while" => Token::KeywordWhile,
                                     "for" => Token::KeywordFor,
                                     "let" => Token::KeywordLet,
@@ -419,17 +420,18 @@ impl<BufRead: std::io::BufRead> Lexer<BufRead> {
             }
         })
     }
+    /// 次のトークンに関数 `fnc` を適用した結果を返す．ただしトークンはキューに残す
     pub fn ask(
         &mut self,
         fnc: impl FnOnce(&Token) -> bool,
         log: &mut Vec<String>,
-    ) -> Result<Option<bool>, Error> {
+    ) -> Result<bool, Error> {
         Ok(loop {
             match self.queue.front() {
-                Some((_, token)) => break Some(fnc(token)),
+                Some((_, token)) => break fnc(token),
                 None => {
                     if !self.read(log)? {
-                        break None;
+                        break false;
                     }
                 }
             }
