@@ -370,6 +370,35 @@ impl<BufRead> Lexer<BufRead> {
 }
 
 impl<BufRead: std::io::BufRead> Lexer<BufRead> {
+    pub fn read(&mut self, log: &mut Vec<String>) -> Result<bool, Error> {
+        let mut line = String::new();
+        if self.prompt {
+            // 対話環境ではプロンプトを出す
+            // ファイルから読むときは出さない
+            use std::io::Write;
+            print!("> ");
+            std::io::stdout().flush().expect("failed to flush stdout");
+        }
+        if self
+            .reader
+            .read_line(&mut line)
+            .expect("failed to read input")
+            > 0
+        {
+            let result = self.inner.run(log.len(), &line, &mut self.queue);
+            log.push(line);
+            result.map(|()| true)
+        } else {
+            // ファイルの末尾に達した．
+            return if let Some(pos) = self.inner.comment.pop() {
+                Err(Error::UnterminatedComment(pos))
+            } else if let Some((pos, _)) = self.inner.string.take() {
+                Err(Error::UnterminatedStringLiteral(pos))
+            } else {
+                Ok(false)
+            };
+        }
+    }
     /// 次のトークンを返す．
     ///
     /// 必要なだけ次の行を読み，
@@ -379,39 +408,31 @@ impl<BufRead: std::io::BufRead> Lexer<BufRead> {
     /// - 字句解析に成功したら， `Option` に包んでトークンを返す
     ///   （ `None` は，ファイル終端に達し全てのトークンを読み切ったことを意味する）．
     pub fn next(&mut self, log: &mut Vec<String>) -> Result<Option<(pos::Range, Token)>, Error> {
-        loop {
+        Ok(loop {
             match self.queue.pop_front() {
-                Some(token) => return Ok(Some(token)),
+                Some(token) => break Some(token),
                 None => {
-                    let mut line = String::new();
-                    if self.prompt {
-                        // 対話環境ではプロンプトを出す
-                        // ファイルから読むときは出さない
-                        use std::io::Write;
-                        print!("> ");
-                        std::io::stdout().flush().expect("failed to flush stdout");
-                    }
-                    if self
-                        .reader
-                        .read_line(&mut line)
-                        .expect("failed to read input")
-                        > 0
-                    {
-                        let result = self.inner.run(log.len(), &line, &mut self.queue);
-                        log.push(line);
-                        result?;
-                    } else {
-                        // ファイルの末尾に達した．
-                        return if let Some(pos) = self.inner.comment.pop() {
-                            Err(Error::UnterminatedComment(pos))
-                        } else if let Some((pos, _)) = self.inner.string.take() {
-                            Err(Error::UnterminatedStringLiteral(pos))
-                        } else {
-                            Ok(None)
-                        };
+                    if !self.read(log)? {
+                        break None;
                     }
                 }
             }
-        }
+        })
+    }
+    pub fn ask(
+        &mut self,
+        fnc: impl FnOnce(&Token) -> bool,
+        log: &mut Vec<String>,
+    ) -> Result<Option<bool>, Error> {
+        Ok(loop {
+            match self.queue.front() {
+                Some((_, token)) => break Some(fnc(token)),
+                None => {
+                    if !self.read(log)? {
+                        break None;
+                    }
+                }
+            }
+        })
     }
 }

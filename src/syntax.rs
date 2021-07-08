@@ -68,7 +68,7 @@ pub enum Statement {
     /// 波括弧 `{ }` で囲まれたブロック
     Block(Vec<Statement>),
     /// if 文
-    If(Expression, Box<Statement>, Box<Option<Statement>>),
+    If(Expression, Box<Statement>, Option<Box<Statement>>),
     /// while 文
     While(Expression, Box<Statement>),
     Break,

@@ -22,6 +22,8 @@ pub enum Token {
     KeywordContinue,
     /// キーワード `if`
     KeywordIf,
+    /// キーワード `else`
+    KeywordElse,
     /// キーワード `while`
     KeywordWhile,
     /// キーワード `for`

@@ -394,7 +394,7 @@ pub fn compile_statement(
             let stmt1 = compile_statement(*stmt1, copied, functions)?;
             let copied = &mut variables.clone();
             let stmt2 = stmt2
-                .map(|stmt| compile_statement(stmt, copied, functions))
+                .map(|stmt| compile_statement(*stmt, copied, functions))
                 .transpose()?;
             program::Statement::If(cond, stmt1.into(), stmt2.into())
         }
