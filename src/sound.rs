@@ -223,7 +223,13 @@ impl SoundIter {
             SoundIter::Reciprocal(iter) => 1. / iter.next(),
             SoundIter::Add(left, right) => left.next() + right.next(),
             SoundIter::Sub(left, right) => left.next() - right.next(),
-            SoundIter::Mul(left, right) => left.next() * right.next(),
+            SoundIter::Mul(left, right) => {
+                let mut ret = left.next();
+                if ret != 0. {
+                    ret *= right.next();
+                }
+                ret
+            }
             SoundIter::Div(left, right) => left.next() / right.next(),
             SoundIter::Rem(left, right) => left.next() % right.next(),
             SoundIter::Pow(left, right) => left.next().powf(right.next()),

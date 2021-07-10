@@ -159,6 +159,7 @@ impl Inner {
                                     "let" => Token::KeywordLet,
                                     "break" => Token::KeywordBreak,
                                     "continue" => Token::KeywordContinue,
+                                    "return" => Token::KeywordReturn,
                                     s => Token::Identifier(s.to_string()),
                                 },
                                 State::Parameter => {

@@ -303,10 +303,10 @@ pub fn parse_statement(
             let body_else = lexer
                 .ask(|token| matches!(token, Token::KeywordElse), log)?
                 .then(|| {
-                    lexer.next(log)?;
+                    let (r#else, _) = lexer.next(log)?.unwrap();
                     match parse_statement(lexer, log)? {
                         Some(statement) => Ok(statement.into()),
-                        None => panic!(),
+                        None => Err(Error::UnexpectedEOFAfterKeyword(r#else)),
                     }
                 })
                 .transpose()?;
@@ -339,14 +339,19 @@ pub fn parse_statement(
             Statement::Block(vec)
         }
         (None, Some((r#break, Token::KeywordBreak))) => match lexer.next(log)? {
-            Some((_, Token::Semicolon)) => Statement::Break,
+            Some((_, Token::Semicolon)) => Statement::Break(r#break),
             Some((other, _)) => return Err(Error::UnexpectedTokenAfterKeyword(r#break, other)),
             None => return Err(Error::UnexpectedEOFAfterKeyword(r#break)),
         },
         (None, Some((r#continue, Token::KeywordContinue))) => match lexer.next(log)? {
-            Some((_, Token::Semicolon)) => Statement::Continue,
+            Some((_, Token::Semicolon)) => Statement::Continue(r#continue),
             Some((other, _)) => return Err(Error::UnexpectedTokenAfterKeyword(r#continue, other)),
             None => return Err(Error::UnexpectedEOFAfterKeyword(r#continue)),
+        },
+        (None, Some((r#return, Token::KeywordReturn))) => match parse_expression(lexer, log)? {
+            (expr, Some((_, Token::Semicolon))) => Statement::Return(r#return, expr),
+            (Some(other), _) => return Err(Error::NoSemicolonAtEndOfStatement(other.range)),
+            (None, _) => return Err(Error::UnexpectedEOFAfterKeyword(r#return)),
         },
         (Some(expr), _) => return Err(Error::NoSemicolonAtEndOfStatement(expr.range)),
         (None, None) => return Ok(None),

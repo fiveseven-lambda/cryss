@@ -9,20 +9,8 @@ let Adsr =
     * min(1, Exp(-.1) >> 2);      // リリース
 write(Adsr, 3, "adsr.wav");
 
-let Kick =
-    sin(2 * PI * 100 * Exp(-.5) * .5) // 周波数が下がってゆく波を
-    * Exp(-.1);                       // 減衰させると
-write(Kick, 1, "kick.wav");           // キックの音になる
-
-// キックを 1/4 秒間隔で 16 回並べてみる
-Kick = Begin * Kick;
-let Drum = Linear(0, 0, 1);
-let i = 0;
-while(i < 16){
-    Drum = Drum + Kick >> (i / 4);
-    i = i + 1;
-}
-write(Drum, 5, "drum.wav");
+let Kick = 4e+5 * Sin(1e-3) * Exp(-1e-3);
+write(Kick, 1, "kick.wav");
 
 let Fm =
     sin(

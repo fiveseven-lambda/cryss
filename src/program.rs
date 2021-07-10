@@ -6,6 +6,7 @@ use std::rc::Rc;
 use crate::types;
 
 use crate::function::{BooleanFunction, RealFunction, SoundFunction, StringFunction, VoidFunction};
+use crate::pos;
 use crate::sound::{self, Sound};
 
 type RcCell<T> = Rc<Cell<T>>;
@@ -35,6 +36,14 @@ def_convert!(BooleanExpression => Expression::Boolean);
 def_convert!(SoundExpression => Expression::Sound);
 def_convert!(StringExpression => Expression::String);
 def_convert!(VoidExpression => Expression::Void);
+
+pub trait Evaluatable: Sized {
+    type Output;
+    fn evaluate(self) -> Self::Output;
+
+    /// いや，こいつには `Result<Self, Error>` を返させるべきかも
+    fn from(_: Option<(Expression, pos::Range)>) -> Result<Self, Option<(Expression, pos::Range)>>;
+}
 
 impl Expression {
     pub fn ty(&self) -> types::Type {
@@ -110,7 +119,8 @@ pub enum RealExpression {
     Invocation(Rc<RealFunction>, Vec<Argument>),
 }
 
-impl RealExpression {
+impl Evaluatable for RealExpression {
+    type Output = f64;
     fn evaluate(self) -> f64 {
         match self {
             RealExpression::Const(value) => value,
@@ -134,6 +144,14 @@ impl RealExpression {
             }
         }
     }
+    fn from(
+        expr: Option<(Expression, pos::Range)>,
+    ) -> Result<RealExpression, Option<(Expression, pos::Range)>> {
+        match expr {
+            Some((Expression::Real(expr), _)) => Ok(expr),
+            other => Err(other),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -152,7 +170,8 @@ pub enum BooleanExpression {
     Invocation(Rc<BooleanFunction>, Vec<Argument>),
 }
 
-impl BooleanExpression {
+impl Evaluatable for BooleanExpression {
+    type Output = bool;
     fn evaluate(self) -> bool {
         match self {
             BooleanExpression::Reference(rc) => rc.get(),
@@ -180,6 +199,14 @@ impl BooleanExpression {
             }
         }
     }
+    fn from(
+        expr: Option<(Expression, pos::Range)>,
+    ) -> Result<BooleanExpression, Option<(Expression, pos::Range)>> {
+        match expr {
+            Some((Expression::Boolean(expr), _)) => Ok(expr),
+            other => Err(other),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -205,7 +232,8 @@ pub enum SoundExpression {
     ),
 }
 
-impl SoundExpression {
+impl Evaluatable for SoundExpression {
+    type Output = Sound;
     fn evaluate(self) -> Sound {
         match self {
             SoundExpression::Reference(rc) => rc.borrow().clone(),
@@ -247,6 +275,15 @@ impl SoundExpression {
             SoundExpression::RightShift(left, right) => left.evaluate().shift(-right.evaluate()),
         }
     }
+    fn from(
+        expr: Option<(Expression, pos::Range)>,
+    ) -> Result<SoundExpression, Option<(Expression, pos::Range)>> {
+        match expr {
+            Some((Expression::Sound(expr), _)) => Ok(expr),
+            Some((Expression::Real(expr), _)) => Ok(SoundExpression::Real(expr)),
+            other => Err(other),
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -258,7 +295,8 @@ pub enum StringExpression {
     Invocation(Rc<StringFunction>, Vec<Argument>),
 }
 
-impl StringExpression {
+impl Evaluatable for StringExpression {
+    type Output = String;
     fn evaluate(self) -> String {
         match self {
             StringExpression::Const(string) => string,
@@ -275,67 +313,105 @@ impl StringExpression {
             }
         }
     }
+    fn from(
+        expr: Option<(Expression, pos::Range)>,
+    ) -> Result<StringExpression, Option<(Expression, pos::Range)>> {
+        match expr {
+            Some((Expression::String(expr), _)) => Ok(expr),
+            other => Err(other),
+        }
+    }
 }
 #[derive(Clone)]
 pub enum VoidExpression {
+    Const,
     Invocation(Rc<VoidFunction>, Vec<Argument>),
 }
-impl VoidExpression {
+impl Evaluatable for VoidExpression {
+    type Output = ();
     fn evaluate(self) {
         match self {
+            VoidExpression::Const => (/* do nothing */),
             VoidExpression::Invocation(fnc, arguments) => {
                 arguments.into_iter().for_each(Argument::set);
                 fnc.evaluate()
             }
         }
     }
+    fn from(
+        expr: Option<(Expression, pos::Range)>,
+    ) -> Result<VoidExpression, Option<(Expression, pos::Range)>> {
+        match expr {
+            None => Ok(VoidExpression::Const),
+            other => Err(other),
+        }
+    }
 }
 
 #[derive(Clone)]
-pub enum Statement {
+pub enum Statement<Expr: Evaluatable> {
     Expression(Option<Expression>),
     RealSubstitution(RcCell<f64>, RealExpression),
     BooleanSubstitution(RcCell<bool>, BooleanExpression),
     SoundSubstitution(RcRefCell<Sound>, SoundExpression),
     StringSubstitution(RcRefCell<String>, StringExpression),
-    While(BooleanExpression, Box<Statement>),
-    If(BooleanExpression, Box<Statement>, Box<Option<Statement>>),
-    Block(Vec<Statement>),
+    While(BooleanExpression, Box<Statement<Expr>>),
+    If(
+        BooleanExpression,
+        Box<Statement<Expr>>,
+        Box<Option<Statement<Expr>>>,
+    ),
+    Block(Vec<Statement<Expr>>),
+    Return(Expr),
 }
 
-impl Statement {
-    pub fn run(self) {
+impl<Expr: Evaluatable + Clone> Statement<Expr> {
+    pub fn run(self) -> Option<Expr::Output> {
         match self {
             Statement::Expression(expr) => {
                 expr.map(Expression::evaluate);
+                None
             }
             Statement::RealSubstitution(rc, expr) => {
                 rc.set(expr.evaluate());
+                None
             }
             Statement::BooleanSubstitution(rc, expr) => {
                 rc.set(expr.evaluate());
+                None
             }
             Statement::StringSubstitution(rc, expr) => {
                 *rc.borrow_mut() = expr.evaluate();
+                None
             }
             Statement::SoundSubstitution(rc, expr) => {
                 *rc.borrow_mut() = expr.evaluate();
+                None
             }
             Statement::While(cond, stmt) => {
                 while cond.clone().evaluate() {
-                    stmt.clone().run();
+                    if let Some(value) = stmt.clone().run() {
+                        return Some(value);
+                    }
                 }
+                None
             }
             Statement::If(cond, stmt1, stmt2) => {
                 if cond.evaluate() {
-                    stmt1.run();
+                    stmt1.run()
                 } else {
-                    stmt2.map(Statement::run);
+                    stmt2.map(Statement::run).flatten()
                 }
             }
             Statement::Block(vec) => {
-                vec.into_iter().for_each(Statement::run);
+                for stmt in vec {
+                    if let Some(value) = stmt.run() {
+                        return Some(value);
+                    }
+                }
+                None
             }
+            Statement::Return(expr) => Some(expr.evaluate()),
         }
     }
 }

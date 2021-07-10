@@ -3,6 +3,7 @@
 use crate::compiler;
 use crate::error::Error;
 use crate::function::Function;
+use crate::program::VoidExpression;
 use crate::sound::Sound;
 use crate::syntax::Statement;
 use crate::value::Value;
@@ -14,6 +15,7 @@ use std::rc::Rc;
 pub struct Environment {
     variables: HashMap<String, Value>,
     functions: HashMap<String, Function>,
+    active: bool,
 }
 
 impl Environment {
@@ -63,10 +65,20 @@ impl Environment {
         Environment {
             variables,
             functions,
+            active: true,
         }
     }
     pub fn run(&mut self, statement: Statement) -> Result<(), Error> {
-        compiler::compile_statement(statement, &mut self.variables, &mut self.functions)?.run();
+        let statement = compiler::compile_statement::<VoidExpression>(
+            statement,
+            &mut self.variables,
+            &mut self.functions,
+        )?;
+        if self.active {
+            if let Some(()) = statement.run() {
+                self.active = false;
+            }
+        }
         Ok(())
     }
 }

@@ -25,9 +25,11 @@ pub enum Error {
     EmptyNamedArgument(pos::Range),
     EmptyParentheses(pos::Range, pos::Range),
     EmptyRHS(pos::Range),
+    EmptyExpressionReturn(pos::Range),
     TypeMismatchUnary(pos::Range, Type),
     TypeMismatchBinary(pos::Range, Type, pos::Range, Type),
     TypeMismatchCond(pos::Range, Type),
+    TypeMismatchReturn(pos::Range, Type),
     WrongNumberOfArguments(pos::Range, usize, usize),
     TypeMismatchArgument(pos::Range, Type),
     LHSNotIdentifier(pos::Range, pos::Range),
@@ -130,6 +132,10 @@ impl Error {
                 println!("and closing parenthesis at {}", close);
                 close.print(log);
             }
+            Error::EmptyExpressionReturn(range) => {
+                println!("empty expression after `return` at {}", range);
+                range.print(log);
+            }
             Error::TypeMismatchUnary(range, ty) => {
                 println!("type mismatch at {} (found {})", range, ty);
                 range.print(log);
@@ -143,6 +149,10 @@ impl Error {
             Error::TypeMismatchCond(cond, ty) => {
                 println!("type mismatch at {} (found {})", cond, ty);
                 cond.print(log);
+            }
+            Error::TypeMismatchReturn(range, ty) => {
+                println!("type mismatch after at {} (found {})", range, ty);
+                range.print(log);
             }
             Error::WrongNumberOfArguments(range, expected, found) => {
                 println!(

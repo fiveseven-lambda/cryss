@@ -304,11 +304,11 @@ fn compile_expression(
     Ok((ret, expression.range))
 }
 
-pub fn compile_statement(
+pub fn compile_statement<Expr: program::Evaluatable>(
     statement: syntax::Statement,
     variables: &mut HashMap<String, value::Value>,
     functions: &mut HashMap<String, function::Function>,
-) -> Result<program::Statement, error::Error> {
+) -> Result<program::Statement<Expr>, error::Error> {
     use error::Error;
     Ok(match statement {
         syntax::Statement::Expression(expr) => program::Statement::Expression(
@@ -398,6 +398,19 @@ pub fn compile_statement(
                 .transpose()?;
             program::Statement::If(cond, stmt1.into(), stmt2.into())
         }
-        _ => todo!(),
+        syntax::Statement::Break(r#break) => todo!(),
+        syntax::Statement::Continue(r#continue) => todo!(),
+        syntax::Statement::Return(r#return, expr) => {
+            let expr = expr
+                .map(|expr| compile_expression(expr, variables, functions))
+                .transpose()?;
+            match Expr::from(expr) {
+                Ok(expr) => program::Statement::Return(expr),
+                Err(Some((expr, range))) => {
+                    return Err(Error::TypeMismatchReturn(range, expr.ty()))
+                }
+                Err(None) => return Err(Error::EmptyExpressionReturn(r#return)),
+            }
+        }
     })
 }

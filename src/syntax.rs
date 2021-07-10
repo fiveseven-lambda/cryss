@@ -71,8 +71,9 @@ pub enum Statement {
     If(Expression, Box<Statement>, Option<Box<Statement>>),
     /// while 文
     While(Expression, Box<Statement>),
-    Break,
-    Continue,
+    Break(pos::Range),
+    Continue(pos::Range),
+    Return(pos::Range, Option<Expression>),
 }
 
 use std::fmt::{Debug, Formatter, Result as FResult};
