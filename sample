@@ -1,20 +1,28 @@
-write(Linear(0, 440) % 1, 1, "saw.wav");                   // のこぎり波
-write(floor(Linear(0, 2 * 440) % 2), 1, "square.wav");     // 矩形波
-write(abs(Linear(0, 2 * 440) % 2 - 1), 1, "triangle.wav"); // 三角波
+write(Linear(440) % 1, 1, "saw.wav");                   // のこぎり波
+write(floor(Linear(2 * 440) % 2), 1, "square.wav");     // 矩形波
+write(abs(Linear(2 * 440) % 2 - 1), 1, "triangle.wav"); // 三角波
 
 let Adsr =
     .5 * (Sin(440) + Sin(660))    // 440 Hz （ラ）と 660 Hz （ミ）
-    * min(1, Linear(0, 50))    // アタック
+    * min(1, Linear(50))          // アタック
     * (.9 * Exp(-.1) + .1) >> /50 // ディケイ，サステイン
     * min(1, Exp(-.1) >> 2);      // リリース
 write(Adsr, 3, "adsr.wav");
 
-let Kick = 4e+5 * Sin(1e-3) * Exp(-1e-3);
+let Kick = 4e+5 * Sin(1e-3) * Exp(-1e-3); // キック
 write(Kick, 1, "kick.wav");
+let Snare = .5 * (Rand * 2 - 1 + sin(300 * PI * Exp(-.5) * .5)) * Exp(-.01); // スネア
+write(Snare, 1, "snare.wav");
+
+let Kick = Begin * sin(PI * 5 * Exp(-.01) * .5) * Exp(-.1);
+let Snare = Begin * Snare;
+let Drum = Kick + Snare >> /2;
+Drum = Drum + (Drum + Kick >> /4) >> 1;
+write(Drum, 2, "drum.wav");
 
 let Fm =
     sin(
-        Linear(0, 2 * PI * 220) // 220 Hz の正弦波に
+        Linear(2 * PI * 220)       // 220 Hz の正弦波に
         + 3 * Sin(440)             // 440 Hz で変調をかける
     );
 write(Fm, 3, "fm.wav");            // FM 音源

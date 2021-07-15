@@ -48,16 +48,15 @@ impl Function {
         }
     }
     pub fn linear() -> Function {
-        let x0 = Rc::new(Cell::new(0.));
         let x1 = Rc::new(Cell::new(0.));
         let t1 = Rc::new(Cell::new(0.));
         Function {
-            arguments: vec![Value::Real(x0.clone()), Value::Real(x1.clone())],
+            arguments: vec![Value::Real(x1.clone())],
             named_arguments: vec![(
                 "t".to_string(),
                 Argument::Real(t1.clone(), RealExpression::Const(1.)),
             )],
-            body: Body::Sound(Rc::new(SoundFunction::Linear(x0, x1, t1))),
+            body: Body::Sound(Rc::new(SoundFunction::Linear(x1, t1))),
         }
     }
     pub fn write() -> Function {
@@ -107,7 +106,7 @@ impl BooleanFunction {
 
 pub enum SoundFunction {
     Sin(RcCell<f64>),
-    Linear(RcCell<f64>, RcCell<f64>, RcCell<f64>),
+    Linear(RcCell<f64>, RcCell<f64>),
     Exp(RcCell<f64>),
 }
 
@@ -118,15 +117,10 @@ impl SoundFunction {
                 frequency: frequency.get(),
                 phase: 0.,
             },
-            SoundFunction::Linear(x0, x1, t1) => {
-                let x0 = x0.get();
-                let x1 = x1.get();
-                let t1 = t1.get();
-                Sound::Linear {
-                    slope: (x1 - x0) / t1,
-                    intercept: x0,
-                }
-            }
+            SoundFunction::Linear(x1, t1) => Sound::Linear {
+                slope: x1.get() / t1.get(),
+                intercept: 0.,
+            },
             SoundFunction::Exp(time) => Sound::Exp {
                 coefficient: 1. / time.get(),
                 intercept: 1.,
