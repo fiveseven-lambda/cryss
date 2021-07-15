@@ -1,10 +1,10 @@
-write(Linear(0, 440, 1) % 1, 1, "saw.wav");                   // のこぎり波
-write(floor(Linear(0, 2 * 440, 1) % 2), 1, "square.wav");     // 矩形波
-write(abs(Linear(0, 2 * 440, 1) % 2 - 1), 1, "triangle.wav"); // 三角波
+write(Linear(0, 440) % 1, 1, "saw.wav");                   // のこぎり波
+write(floor(Linear(0, 2 * 440) % 2), 1, "square.wav");     // 矩形波
+write(abs(Linear(0, 2 * 440) % 2 - 1), 1, "triangle.wav"); // 三角波
 
 let Adsr =
     .5 * (Sin(440) + Sin(660))    // 440 Hz （ラ）と 660 Hz （ミ）
-    * min(1, Linear(0, 50, 1))    // アタック
+    * min(1, Linear(0, 50))    // アタック
     * (.9 * Exp(-.1) + .1) >> /50 // ディケイ，サステイン
     * min(1, Exp(-.1) >> 2);      // リリース
 write(Adsr, 3, "adsr.wav");
@@ -14,7 +14,7 @@ write(Kick, 1, "kick.wav");
 
 let Fm =
     sin(
-        Linear(0, 2 * PI * 220, 1) // 220 Hz の正弦波に
+        Linear(0, 2 * PI * 220) // 220 Hz の正弦波に
         + 3 * Sin(440)             // 440 Hz で変調をかける
     );
 write(Fm, 3, "fm.wav");            // FM 音源

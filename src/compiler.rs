@@ -29,7 +29,7 @@ fn compile_expression(
             Some(Value::String(rc)) => StringExpression::Reference(rc.clone()).into(),
             None => return Err(Error::UndefinedVariable(name, expression.range)),
         },
-        Node::Invocation(name, arguments, named_arguments) => {
+        Node::Invocation(name, arguments, mut named_arguments) => {
             let function = match functions.get(&name) {
                 Some(function) => function,
                 None => return Err(Error::UndefinedFunction(name, expression.range)),
@@ -60,8 +60,40 @@ fn compile_expression(
                     (_, other) => return Err(Error::TypeMismatchArgument(argument.1, other.ty())),
                 }
             }
-            for (_name, _expr) in named_arguments {
-                // todo: 名前付き引数も……
+            for (name, argument) in &function.named_arguments {
+                match named_arguments.remove(name) {
+                    Some(given) => {
+                        let given = compile_expression(given, variables, functions)?;
+                        match (argument, given.0) {
+                            (Argument::Real(rc, _), Real(expr)) => {
+                                vec.push(Argument::Real(rc.clone(), expr))
+                            }
+                            (Argument::Boolean(rc, _), Boolean(expr)) => {
+                                vec.push(Argument::Boolean(rc.clone(), expr))
+                            }
+                            (Argument::Sound(rc, _), Sound(expr)) => {
+                                vec.push(Argument::Sound(rc.clone(), expr))
+                            }
+                            (Argument::String(rc, _), String(expr)) => {
+                                vec.push(Argument::String(rc.clone(), expr))
+                            }
+                            (Argument::Real(rc, _), Sound(expr)) => sounds.push((rc.clone(), expr)),
+                            (_, other) => {
+                                return Err(Error::TypeMismatchArgument(given.1, other.ty()))
+                            }
+                        }
+                    }
+                    None => {
+                        vec.push(argument.clone());
+                    }
+                }
+            }
+
+            if !named_arguments.is_empty() {
+                return Err(Error::UnusedNamedArguments(
+                    expression.range,
+                    named_arguments.into_iter().map(|(name, _)| name).collect(),
+                ));
             }
 
             if sounds.is_empty() {
@@ -227,6 +259,9 @@ fn compile_expression(
             ((Sound(left), _), (Real(right), _)) => {
                 SoundExpression::LeftShift(left.into(), right.into()).into()
             }
+            ((Real(left), _), (Real(right), _)) => {
+                SoundExpression::LeftShift(SoundExpression::Real(left).into(), right.into()).into()
+            }
             ((l, x), (r, y)) => return Err(Error::TypeMismatchBinary(x, l.ty(), y, r.ty())),
         },
         Node::RightShift(left, right) => match (
@@ -235,6 +270,9 @@ fn compile_expression(
         ) {
             ((Sound(left), _), (Real(right), _)) => {
                 SoundExpression::RightShift(left.into(), right.into()).into()
+            }
+            ((Real(left), _), (Real(right), _)) => {
+                SoundExpression::RightShift(SoundExpression::Real(left).into(), right.into()).into()
             }
             ((l, x), (r, y)) => return Err(Error::TypeMismatchBinary(x, l.ty(), y, r.ty())),
         },

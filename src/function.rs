@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-
+use crate::program::{Argument, RealExpression};
 use crate::sound::Sound;
 use crate::value::Value;
 
@@ -11,7 +10,7 @@ type RcRefCell<T> = Rc<RefCell<T>>;
 pub struct Function {
     pub body: Body,
     pub arguments: Vec<Value>,
-    pub named_arguments: HashMap<String, Value>,
+    pub named_arguments: Vec<(String, Argument)>,
 }
 
 impl Function {
@@ -19,7 +18,7 @@ impl Function {
         let x = Rc::new(Cell::new(0.));
         Function {
             arguments: vec![Value::Real(x.clone())],
-            named_arguments: HashMap::new(),
+            named_arguments: Vec::new(),
             body: Body::Real(Rc::new(RealFunction::Primitive1(fnc, x))),
         }
     }
@@ -28,7 +27,7 @@ impl Function {
         let y = Rc::new(Cell::new(0.));
         Function {
             arguments: vec![Value::Real(x.clone()), Value::Real(y.clone())],
-            named_arguments: HashMap::new(),
+            named_arguments: Vec::new(),
             body: Body::Real(Rc::new(RealFunction::Primitive2(fnc, x, y))),
         }
     }
@@ -36,7 +35,7 @@ impl Function {
         let x = Rc::new(Cell::new(0.));
         Function {
             arguments: vec![Value::Real(x.clone())],
-            named_arguments: HashMap::new(),
+            named_arguments: Vec::new(),
             body: Body::Sound(Rc::new(SoundFunction::Sin(x))),
         }
     }
@@ -44,7 +43,7 @@ impl Function {
         let x = Rc::new(Cell::new(0.));
         Function {
             arguments: vec![Value::Real(x.clone())],
-            named_arguments: HashMap::new(),
+            named_arguments: Vec::new(),
             body: Body::Sound(Rc::new(SoundFunction::Exp(x))),
         }
     }
@@ -53,14 +52,11 @@ impl Function {
         let x1 = Rc::new(Cell::new(0.));
         let t1 = Rc::new(Cell::new(0.));
         Function {
-            arguments: vec![
-                Value::Real(x0.clone()),
-                Value::Real(x1.clone()),
-                Value::Real(t1.clone()),
-            ],
-            named_arguments: vec![("t".to_string(), Value::Real(t1.clone()))]
-                .into_iter()
-                .collect(),
+            arguments: vec![Value::Real(x0.clone()), Value::Real(x1.clone())],
+            named_arguments: vec![(
+                "t".to_string(),
+                Argument::Real(t1.clone(), RealExpression::Const(1.)),
+            )],
             body: Body::Sound(Rc::new(SoundFunction::Linear(x0, x1, t1))),
         }
     }
@@ -74,7 +70,7 @@ impl Function {
                 Value::Real(time.clone()),
                 Value::String(filename.clone()),
             ],
-            named_arguments: HashMap::new(),
+            named_arguments: Vec::new(),
             body: Body::Void(Rc::new(VoidFunction::Write(sound, time, filename))),
         }
     }

@@ -31,6 +31,7 @@ pub enum Error {
     TypeMismatchCond(pos::Range, Type),
     TypeMismatchReturn(pos::Range, Type),
     WrongNumberOfArguments(pos::Range, usize, usize),
+    UnusedNamedArguments(pos::Range, Vec<String>),
     TypeMismatchArgument(pos::Range, Type),
     LHSNotIdentifier(pos::Range, pos::Range),
     NoSemicolonAtEndOfStatement(pos::Range),
@@ -160,6 +161,9 @@ impl Error {
                     range, expected, found
                 );
                 range.print(log);
+            }
+            Error::UnusedNamedArguments(range, names) => {
+                println!("unused named arguments ({}) at {}", names.join(", "), range);
             }
             Error::TypeMismatchArgument(arg, ty) => {
                 println!("type mismatch at {} (found {})", arg, ty);
