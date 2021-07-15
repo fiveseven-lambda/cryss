@@ -33,9 +33,9 @@ impl Argument {
 #[derive(Clone)]
 pub enum Sound {
     Const(f64),
-    Linear { slope: f64, intercept: f64 },    // x = at + b
-    Sin { frequency: f64, phase: f64 },       // x = sin(τft + θ)
-    Exp { coefficient: f64, intercept: f64 }, // x = ae^(bt)
+    Linear { slope: f64, intercept: f64 }, // x = at + b
+    Sin { frequency: f64, phase: f64 },    // x = sin(τft + θ)
+    Exp { slope: f64, intercept: f64 },    // x = e^(at + b)
     Begin(f64),
     End(f64),
     Rand,
@@ -62,12 +62,9 @@ impl Sound {
                 frequency,
                 phase: TAU * frequency * t + phase,
             },
-            Sound::Exp {
-                coefficient,
-                intercept,
-            } => Sound::Exp {
-                coefficient,
-                intercept: intercept * (coefficient * t).exp(),
+            Sound::Exp { slope, intercept } => Sound::Exp {
+                slope,
+                intercept: slope * t + intercept,
             },
             Sound::Begin(time) => Sound::Begin(time + t),
             Sound::End(time) => Sound::End(time + t),
@@ -104,12 +101,10 @@ impl Sound {
                 next: Complex64::from_polar(1., phase),
                 ratio: Complex64::from_polar(1., TAU * frequency / samplerate),
             },
-            Sound::Exp {
-                coefficient,
-                intercept,
-            } => SoundIter::Exp {
-                next: intercept,
-                ratio: (coefficient / samplerate).exp(),
+            Sound::Exp { slope, intercept } => SoundIter::Exp {
+                first: intercept,
+                difference: slope / samplerate,
+                counter: 0,
             },
             Sound::Begin(time) => SoundIter::Begin((time * samplerate) as i64),
             Sound::End(time) => SoundIter::End((time * samplerate) as i64),
@@ -154,8 +149,9 @@ pub enum SoundIter {
         counter: i64,
     },
     Exp {
-        next: f64,
-        ratio: f64,
+        first: f64,
+        difference: f64,
+        counter: i64,
     },
     Sin {
         next: Complex64,
@@ -197,10 +193,14 @@ impl SoundIter {
                 *next *= *ratio;
                 ret
             }
-            SoundIter::Exp { next, ratio } => {
-                let ret = *next;
-                *next *= *ratio;
-                ret
+            SoundIter::Exp {
+                first,
+                difference,
+                counter,
+            } => {
+                let ret = *first + *difference * *counter as f64;
+                *counter += 1;
+                ret.exp()
             }
             SoundIter::Begin(i) => {
                 if *i < 0 {
@@ -220,7 +220,7 @@ impl SoundIter {
             }
             SoundIter::Rand(rng) => rng.gen(),
             SoundIter::Minus(iter) => -iter.next(),
-            SoundIter::Reciprocal(iter) => 1. / iter.next(),
+            SoundIter::Reciprocal(iter) => iter.next().recip(),
             SoundIter::Add(left, right) => left.next() + right.next(),
             SoundIter::Sub(left, right) => left.next() - right.next(),
             SoundIter::Mul(left, right) => left.next() * right.next(),
@@ -235,5 +235,6 @@ impl SoundIter {
                 fnc.evaluate()
             }
         }
+        .clamp(f64::MIN, f64::MAX)
     }
 }

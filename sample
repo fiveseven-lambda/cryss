@@ -14,7 +14,7 @@ write(Kick, 1, "kick.wav");
 let Snare = .5 * (Rand * 2 - 1 + sin(300 * PI * Exp(-.5) * .5)) * Exp(-.01); // スネア
 write(Snare, 1, "snare.wav");
 
-let Kick = Begin * sin(PI * 5 * Exp(-.01) * .5) * Exp(-.1);
+let Kick = Begin * Kick;
 let Snare = Begin * Snare;
 let Drum = Kick + Snare >> /2;
 Drum = Drum + (Drum + Kick >> /4) >> 1;

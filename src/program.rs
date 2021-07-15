@@ -131,7 +131,7 @@ impl Evaluatable for RealExpression {
                 ret
             }
             RealExpression::Minus(expr) => -expr.evaluate(),
-            RealExpression::Reciprocal(expr) => 1. / expr.evaluate(),
+            RealExpression::Reciprocal(expr) => expr.evaluate().recip(),
             RealExpression::Add(left, right) => left.evaluate() + right.evaluate(),
             RealExpression::Sub(left, right) => left.evaluate() - right.evaluate(),
             RealExpression::Mul(left, right) => left.evaluate() * right.evaluate(),
@@ -143,6 +143,7 @@ impl Evaluatable for RealExpression {
                 fnc.evaluate()
             }
         }
+        .clamp(f64::MIN, f64::MAX)
     }
     fn from(
         expr: Option<(Expression, pos::Range)>,

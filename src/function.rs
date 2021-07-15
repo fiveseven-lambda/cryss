@@ -122,8 +122,8 @@ impl SoundFunction {
                 intercept: 0.,
             },
             SoundFunction::Exp(time) => Sound::Exp {
-                coefficient: 1. / time.get(),
-                intercept: 1.,
+                slope: time.get().recip(),
+                intercept: 0.,
             },
         }
     }
