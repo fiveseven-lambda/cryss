@@ -148,15 +148,12 @@ impl Inner {
                             // トークンが区切れた．
                             let token = match prev_state {
                                 State::Identifier => match &line[start.byte()..index] {
-                                    "real" => Token::KeywordReal,
-                                    "boolean" => Token::KeywordBoolean,
-                                    "Sound" => Token::KeywordSound,
-                                    "string" => Token::KeywordString,
                                     "if" => Token::KeywordIf,
                                     "else" => Token::KeywordElse,
                                     "while" => Token::KeywordWhile,
                                     "for" => Token::KeywordFor,
                                     "let" => Token::KeywordLet,
+                                    "def" => Token::KeywordDef,
                                     "break" => Token::KeywordBreak,
                                     "continue" => Token::KeywordContinue,
                                     "return" => Token::KeywordReturn,

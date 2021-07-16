@@ -9,14 +9,6 @@ pub enum Token {
     Parameter(String),
     Number(f64),
     String(String),
-    /// キーワード `real`
-    KeywordReal,
-    /// キーワード `boolean`
-    KeywordBoolean,
-    /// キーワード `Sound`
-    KeywordSound,
-    /// キーワード `string`
-    KeywordString,
     KeywordLet,
     KeywordBreak,
     KeywordContinue,
@@ -30,6 +22,7 @@ pub enum Token {
     /// `for` 文の syntax は考え中
     KeywordFor,
     KeywordReturn,
+    KeywordDef,
     /// `+`: 足し算
     Plus,
     /// `-`: （ 2 項）引き算，（単項）負号

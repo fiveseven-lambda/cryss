@@ -270,22 +270,27 @@ pub fn parse_statement(
                 (Some(expr), _) => return Err(Error::NoSemicolonAtEndOfStatement(expr.range)),
             }
         }
-        (None, Some((r#let, Token::KeywordLet))) => match parse_expression(lexer, log)? {
-            (Some(lhs), Some((equal, Token::Equal))) => {
-                let name = match lhs.node {
-                    Node::Identifier(name) => name,
-                    _ => return Err(Error::LHSNotIdentifier(lhs.range, equal)),
-                };
-                match parse_expression(lexer, log)? {
-                    (Some(expr), Some((_, Token::Semicolon))) => {
-                        Statement::Declaration(lhs.range, name, expr)
-                    }
-                    (None, _) => return Err(Error::EmptyRHS(equal)),
-                    (Some(expr), _) => return Err(Error::NoSemicolonAtEndOfStatement(expr.range)),
+        (None, Some((r#let, Token::KeywordLet))) => {
+            let (range, name) = match lexer.next(log)? {
+                Some((range, Token::Identifier(name))) => (range, name),
+                Some((range, _)) => return Err(Error::UnexpectedTokenAfterKeyword(r#let, range)),
+                None => return Err(Error::UnexpectedEOFAfterKeyword(r#let)),
+            };
+            let equal = match lexer.next(log)? {
+                Some((equal, Token::Equal)) => equal,
+                _ => return Err(Error::NoSubstitutionAfterLet(r#let)),
+            };
+            match parse_expression(lexer, log)? {
+                (Some(expr), Some((_, Token::Semicolon))) => {
+                    Statement::Declaration(range, name, expr)
                 }
+                (None, _) => return Err(Error::EmptyRHS(equal)),
+                (Some(expr), _) => return Err(Error::NoSemicolonAtEndOfStatement(expr.range)),
             }
-            _ => return Err(Error::NoSubstitutionAfterLet(r#let)),
-        },
+        }
+        (None, Some((r#def, Token::KeywordDef))) => {
+            todo!();
+        }
         (None, Some((r#if, Token::KeywordIf))) => {
             let open = match lexer.next(log)? {
                 Some((open, Token::OpeningParenthesis)) => open,
