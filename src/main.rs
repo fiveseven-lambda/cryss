@@ -15,7 +15,19 @@ mod types;
 mod value;
 
 fn main() {
-    let mut lexer = lexer::Lexer::new(std::io::BufReader::new(std::io::stdin()), true);
+    let matches = clap::App::new("cryss")
+        .arg(clap::Arg::with_name("input"))
+        .get_matches();
+
+    let mut lexer = match matches.value_of("input") {
+        Some(filename) => lexer::Lexer::new(
+            Box::new(std::io::BufReader::new(
+                std::fs::File::open(filename).expect("cannot open the input file"),
+            )),
+            false,
+        ),
+        None => lexer::Lexer::new(Box::new(std::io::BufReader::new(std::io::stdin())), true),
+    };
     let mut log = Vec::new();
 
     let mut environment = environment::Environment::new();

@@ -349,10 +349,12 @@ enum State {
     ClosingBrace,
 }
 
+use std::io::BufRead;
+
 /// 内部で `Inner::run()` を呼び出す
-pub struct Lexer<BufRead> {
+pub struct Lexer {
     /// 標準入力，ファイル入力どちらも可
-    reader: BufRead,
+    reader: Box<dyn BufRead>,
     /// プロンプト文字 `> ` を出力するか否か
     prompt: bool,
     inner: Inner,
@@ -360,8 +362,8 @@ pub struct Lexer<BufRead> {
     queue: VecDeque<(pos::Range, Token)>,
 }
 
-impl<BufRead> Lexer<BufRead> {
-    pub fn new(reader: BufRead, prompt: bool) -> Lexer<BufRead> {
+impl Lexer {
+    pub fn new(reader: Box<dyn BufRead>, prompt: bool) -> Lexer {
         Lexer {
             reader,
             prompt,
@@ -371,7 +373,7 @@ impl<BufRead> Lexer<BufRead> {
     }
 }
 
-impl<BufRead: std::io::BufRead> Lexer<BufRead> {
+impl Lexer {
     pub fn read(&mut self, log: &mut Vec<String>) -> Result<bool, Error> {
         let mut line = String::new();
         if self.prompt {

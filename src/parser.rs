@@ -6,7 +6,6 @@ use syntax::{Expression, Node, Statement};
 use token::Token;
 
 use std::collections::HashMap;
-use std::io::BufRead;
 
 /// パースしたものと，その直後のトークン
 type Parsed<T> = (T, Option<(pos::Range, Token)>);
@@ -14,7 +13,7 @@ type Parsed<T> = (T, Option<(pos::Range, Token)>);
 /// 識別子，リテラル，関数呼び出し，括弧など，
 /// あと前置演算子 `-` `/` `!`
 fn parse_factor(
-    lexer: &mut lexer::Lexer<impl BufRead>,
+    lexer: &mut lexer::Lexer,
     log: &mut Vec<String>,
 ) -> Result<Parsed<Option<Expression>>, Error> {
     let expression = match lexer.next(log)? {
@@ -90,7 +89,7 @@ fn parse_factor(
 ///
 /// 前置演算子 `-` `/` `!` より優先順位は高い
 fn parse_print(
-    lexer: &mut lexer::Lexer<impl BufRead>,
+    lexer: &mut lexer::Lexer,
     log: &mut Vec<String>,
 ) -> Result<Parsed<Option<Expression>>, Error> {
     let mut ret = parse_factor(lexer, log)?;
@@ -108,7 +107,7 @@ macro_rules! def_binary_operator {
     ($(/ $doc:tt)* $prev:ident => $next:ident: $($from:path => $to:expr),* $(,)?) => {
         $(#[doc = $doc])*
         fn $next(
-            lexer: &mut lexer::Lexer<impl BufRead>,
+            lexer: &mut lexer::Lexer,
             log: &mut Vec<String>,
         ) -> Result<Parsed<Option<Expression>>, Error> {
             let mut ret = $prev(lexer, log)?;
@@ -191,7 +190,7 @@ def_binary_operator! {
 ///
 /// 最後のカンマはあってもなくてもいい
 fn parse_invocation_arguments(
-    lexer: &mut lexer::Lexer<impl BufRead>,
+    lexer: &mut lexer::Lexer,
     log: &mut Vec<String>,
 ) -> Result<Parsed<(Vec<Expression>, HashMap<String, Expression>)>, Error> {
     let mut vec = Vec::new();
@@ -223,7 +222,7 @@ fn parse_invocation_arguments(
 
 /// カンマ区切り（空の要素は無視）
 fn parse_list1(
-    lexer: &mut lexer::Lexer<impl BufRead>,
+    lexer: &mut lexer::Lexer,
     log: &mut Vec<String>,
 ) -> Result<Parsed<Vec<Expression>>, Error> {
     let mut vec = Vec::new();
@@ -238,7 +237,7 @@ fn parse_list1(
 
 /// セミコロン区切り（空のものは空の Vec として追加）
 fn parse_list2(
-    lexer: &mut lexer::Lexer<impl BufRead>,
+    lexer: &mut lexer::Lexer,
     log: &mut Vec<String>,
 ) -> Result<Parsed<Vec<Vec<Expression>>>, Error> {
     let mut vec = Vec::new();
@@ -252,7 +251,7 @@ fn parse_list2(
 }
 
 pub fn parse_statement(
-    lexer: &mut lexer::Lexer<impl BufRead>,
+    lexer: &mut lexer::Lexer,
     log: &mut Vec<String>,
 ) -> Result<Option<Statement>, Error> {
     let ret = match parse_expression(lexer, log)? {

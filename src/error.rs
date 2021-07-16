@@ -164,6 +164,7 @@ impl Error {
             }
             Error::UnusedNamedArguments(range, names) => {
                 println!("unused named arguments ({}) at {}", names.join(", "), range);
+                range.print(log);
             }
             Error::TypeMismatchArgument(arg, ty) => {
                 println!("type mismatch at {} (found {})", arg, ty);

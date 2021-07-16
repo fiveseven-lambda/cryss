@@ -63,14 +63,20 @@ impl Function {
         let sound = Rc::new(RefCell::new(Sound::Const(0.)));
         let time = Rc::new(Cell::new(0.));
         let filename = Rc::new(RefCell::new("".to_string()));
+        let samplerate = Rc::new(Cell::new(0.));
         Function {
             arguments: vec![
                 Value::Sound(sound.clone()),
                 Value::Real(time.clone()),
                 Value::String(filename.clone()),
             ],
-            named_arguments: Vec::new(),
-            body: Body::Void(Rc::new(VoidFunction::Write(sound, time, filename))),
+            named_arguments: vec![(
+                "samplerate".to_string(),
+                Argument::Real(samplerate.clone(), RealExpression::Const(44100.)),
+            )],
+            body: Body::Void(Rc::new(VoidFunction::Write(
+                sound, time, filename, samplerate,
+            ))),
         }
     }
 }
@@ -137,23 +143,28 @@ impl StringFunction {
 }
 
 pub enum VoidFunction {
-    Write(RcRefCell<Sound>, RcCell<f64>, RcRefCell<String>),
+    Write(
+        RcRefCell<Sound>,
+        RcCell<f64>,
+        RcRefCell<String>,
+        RcCell<f64>,
+    ),
 }
 impl VoidFunction {
     pub fn evaluate(&self) {
         match self {
-            VoidFunction::Write(sound, time, filename) => {
-                let samplerate = 44100;
-                let mut iter = sound.borrow().clone().iter(samplerate as f64);
+            VoidFunction::Write(sound, time, filename, samplerate) => {
+                let samplerate = samplerate.get();
+                let mut iter = sound.borrow().clone().iter(samplerate);
                 let spec = hound::WavSpec {
                     channels: 1,
-                    sample_rate: samplerate,
+                    sample_rate: samplerate as u32,
                     bits_per_sample: 32,
                     sample_format: hound::SampleFormat::Int,
                 };
                 let mut writer = hound::WavWriter::create(&*filename.borrow(), spec).unwrap();
                 let amplitude = std::i32::MAX as f64;
-                for _ in 0..(time.get() * samplerate as f64) as i64 {
+                for _ in 0..(time.get() * samplerate) as i64 {
                     writer
                         .write_sample((amplitude * iter.next()) as i32)
                         .unwrap();
