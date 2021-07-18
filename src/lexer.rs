@@ -541,4 +541,45 @@ mod tests {
             assert!(matches!(h.next(), Ok(Some((_, t))) if &t == tk));
         })
     }
+
+    #[test]
+    fn operators() {
+        let ops = [
+            ("+ ", Token::Plus),
+            ("- ", Token::Hyphen),
+            ("-> ", Token::HyphenGreater),
+            ("* ", Token::Asterisk),
+            ("/ ", Token::Slash),
+            ("% ", Token::Percent),
+            ("^ ", Token::Circumflex),
+            ("= ", Token::Equal),
+            ("=> ", Token::EqualGreater),
+            ("== ", Token::DoubleEqual),
+            ("! ", Token::Exclamation),
+            ("!= ", Token::ExclamationEqual),
+            ("< ", Token::Less),
+            ("<< ", Token::DoubleLess),
+            ("> ", Token::Greater),
+            (">> ", Token::DoubleGreater),
+            // ("& ", Token::Ampersand), // there are no SingleAmpersand token.
+            ("&& ", Token::DoubleAmpersand),
+            ("| ", Token::Bar),
+            ("|| ", Token::DoubleBar),
+            (": ", Token::Colon),
+            ("; ", Token::Semicolon),
+            (", ", Token::Comma),
+            ("? ", Token::Question),
+            ("( ", Token::OpeningParenthesis),
+            (") ", Token::ClosingParenthesis),
+            ("[ ", Token::OpeningBracket),
+            ("] ", Token::ClosingBracket),
+            ("{ ", Token::OpeningBrace),
+            ("} ", Token::ClosingBrace),
+        ];
+
+        ops.iter().for_each(|(op, tk)| {
+            let mut h = helper(op);
+            assert!(matches!(h.next(), Ok(Some((_, t))) if &t == tk));
+        })
+    }
 }
