@@ -201,17 +201,19 @@ fn parse_invocation_arguments(
         match end {
             Some((comma, Token::Comma)) => vec.push(item.ok_or(Error::EmptyArgument(comma))?),
             Some((equal, Token::Equal)) => {
-                let item = item.ok_or(Error::EmptyArgumentName(equal.clone()))?;
-                match item.node {
-                    Node::Identifier(name) => {
-                        let (item, end) = parse_expression(lexer, log)?;
-                        map.insert(name, item.ok_or(Error::EmptyNamedArgument(equal))?);
-                        if !matches!(end, Some((_, Token::Comma))) {
-                            return Ok(((vec, map), end));
+                match item {
+                    Some(expr) => match expr.node {
+                        Node::Identifier(name) => {
+                            let (item, end) = parse_expression(lexer, log)?;
+                            map.insert(name, item.ok_or(Error::EmptyNamedArgument(equal))?);
+                            if !matches!(end, Some((_, Token::Comma))) {
+                                return Ok(((vec, map), end));
+                            }
                         }
-                    }
-                    _ => return Err(Error::InvalidArgumentName(item.range, equal)),
-                }
+                        _ => return Err(Error::InvalidArgumentName(expr.range, equal)),
+                    },
+                    None => return Err(Error::EmptyArgumentName(equal.clone())),
+                };
             }
             _ => {
                 vec.extend(item);
