@@ -12,8 +12,7 @@ jobs:
         with:
           path: |
             target
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
+            ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1.0.7
