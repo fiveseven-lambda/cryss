@@ -468,14 +468,71 @@ mod tests {
 
     #[test]
     fn unterminated_comment() {
-        let mut h = helper("/*");
-        assert!(matches!(h.next(), Err(_)));
+        let mut h = helper(r#"/* "#);
+        assert!(matches!(h.next(), Err(Error::UnterminatedComment(_))));
     }
 
     #[test]
     fn unterminated_string_literal() {
-        let mut h = helper("\"");
-        assert!(matches!(h.next(), Err(_)));
+        let mut h = helper(r#"" "#);
+        assert!(matches!(h.next(), Err(Error::UnterminatedStringLiteral(_))));
+    }
+
+    #[test]
+    fn no_character_after_back_slash() {
+        let mut h = helper(r#""\"#);
+        assert!(matches!(h.next(), Err(Error::NoCharacterAfterBackSlash(_))));
+    }
+
+    #[test]
+    fn parse_float_failure() {
+        let mut h = helper(r#"2.47032822920623272e-324 "#);
+        assert!(matches!(h.next(), Err(Error::ParseFloatFailure(_, _))));
+    }
+
+    #[test]
+    fn incomplete_scientific_notation() {
+        let mut h = helper(r#"1.234e "#);
+        assert!(matches!(
+            h.next(),
+            Err(Error::IncompleteScientificNotation(_))
+        ));
+    }
+
+    #[test]
+    fn incomplete_scientific_notation_sign() {
+        let mut h = helper(r#"1.234e+ "#);
+        assert!(matches!(
+            h.next(),
+            Err(Error::IncompleteScientificNotation(_))
+        ));
+    }
+
+    #[test]
+    fn incomplete_scientific_notation_sign_minus() {
+        let mut h = helper(r#"1.234e- "#);
+        assert!(matches!(
+            h.next(),
+            Err(Error::IncompleteScientificNotation(_))
+        ));
+    }
+
+    #[test]
+    fn single_ampersand() {
+        let mut h = helper(r#"& "#);
+        assert!(matches!(h.next(), Err(Error::SingleAmpersand(_))));
+    }
+
+    #[test]
+    fn single_dot() {
+        let mut h = helper(r#". "#);
+        assert!(matches!(h.next(), Err(Error::SingleDot(_))));
+    }
+
+    #[test]
+    fn no_line_feed_at_eof() {
+        let mut h = helper(r#"a"#);
+        assert!(matches!(h.next(), Err(Error::NoLineFeedAtEOF)));
     }
 
     #[test]
