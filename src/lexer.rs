@@ -455,7 +455,7 @@ mod tests {
         fn new(s: &'static str) -> TestHelper {
             let log = Vec::new();
             let lex = Lexer::new(Box::new(std::io::BufReader::new(s.as_bytes())), false);
-            TestHelper{ log, lex }
+            TestHelper { log, lex }
         }
 
         fn next(&mut self) -> Result<Option<(pos::Range, Token)>, Error> {
@@ -463,7 +463,13 @@ mod tests {
         }
     }
 
-    fn helper(s: &'static str) -> TestHelper { TestHelper::new(s) }
+    fn helper(s: &'static str) -> TestHelper {
+        TestHelper::new(s)
+    }
+
+    fn nearly(actual: f64, expected: f64, err: f64) -> bool {
+        (expected - err < actual) && (actual < expected + err)
+    }
 
     #[test]
     fn unterminated_comment() {
@@ -478,11 +484,104 @@ mod tests {
     }
 
     #[test]
+    fn identifier() {
+        let mut h = helper(r#"ident "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Identifier(v)))) if v == "ident"));
+    }
+
+    #[test]
+    fn parameter() {
+        let mut h = helper(r#"$param "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Parameter(v)))) if v == "$param"));
+    }
+
+    #[test]
+    fn number_integer() {
+        let mut h = helper(r#"123 "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 123.0, 0.05)));
+    }
+
+    #[test]
+    fn number_decimal() {
+        let mut h = helper(r#"123.4 "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 123.4, 0.05)));
+    }
+
+    #[test]
+    fn number_decimal_from_dot() {
+        let mut h = helper(r#".4 "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 0.4, 0.05)));
+    }
+
+    #[test]
+    fn number_scientific() {
+        let mut h = helper(r#"123.4e3 "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 123.4e3, 0.05)));
+    }
+
+    #[test]
     fn string() {
-        // It makes error result! Please give a spec consideration.
-        // let mut h = helper(r#""str""#);
-        let mut h = helper(r#""str" "#); // last space is must needed for this token.
-        let res = h.next();
-        assert!(matches!(res, Ok(Some((_, Token::String(v)))) if v == "str"));
+        let mut h = helper(r#""str" "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::String(v)))) if v == "str"));
+    }
+
+    #[test]
+    fn keywords() {
+        let keywords = [
+            ("let ", Token::KeywordLet),
+            ("break ", Token::KeywordBreak),
+            ("continue ", Token::KeywordContinue),
+            ("if ", Token::KeywordIf),
+            ("else ", Token::KeywordElse),
+            ("for ", Token::KeywordFor),
+            ("return ", Token::KeywordReturn),
+            ("def ", Token::KeywordDef),
+        ];
+
+        keywords.iter().for_each(|(op, tk)| {
+            let mut h = helper(op);
+            assert!(matches!(h.next(), Ok(Some((_, t))) if &t == tk));
+        })
+    }
+
+    #[test]
+    fn operators() {
+        let ops = [
+            ("+ ", Token::Plus),
+            ("- ", Token::Hyphen),
+            ("-> ", Token::HyphenGreater),
+            ("* ", Token::Asterisk),
+            ("/ ", Token::Slash),
+            ("% ", Token::Percent),
+            ("^ ", Token::Circumflex),
+            ("= ", Token::Equal),
+            ("=> ", Token::EqualGreater),
+            ("== ", Token::DoubleEqual),
+            ("! ", Token::Exclamation),
+            ("!= ", Token::ExclamationEqual),
+            ("< ", Token::Less),
+            ("<< ", Token::DoubleLess),
+            ("> ", Token::Greater),
+            (">> ", Token::DoubleGreater),
+            // ("& ", Token::Ampersand), // there are no SingleAmpersand token.
+            ("&& ", Token::DoubleAmpersand),
+            ("| ", Token::Bar),
+            ("|| ", Token::DoubleBar),
+            (": ", Token::Colon),
+            ("; ", Token::Semicolon),
+            (", ", Token::Comma),
+            ("? ", Token::Question),
+            ("( ", Token::OpeningParenthesis),
+            (") ", Token::ClosingParenthesis),
+            ("[ ", Token::OpeningBracket),
+            ("] ", Token::ClosingBracket),
+            ("{ ", Token::OpeningBrace),
+            ("} ", Token::ClosingBrace),
+        ];
+
+        ops.iter().for_each(|(op, tk)| {
+            let mut h = helper(op);
+            assert!(matches!(h.next(), Ok(Some((_, t))) if &t == tk));
+        })
     }
 }
