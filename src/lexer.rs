@@ -52,7 +52,7 @@ impl Inner {
         let mut prev = None;
         while let Some((index, c)) = iter.next() {
             let pos = pos::Pos::new(line_num, index);
-            if self.comment.is_empty() {
+            if !self.comment.is_empty() {
                 // 今はブロックコメントの途中．
                 if c == '*' {
                     if let Some((_, '/')) = iter.peek() {
