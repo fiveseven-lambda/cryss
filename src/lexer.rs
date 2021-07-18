@@ -479,10 +479,7 @@ mod tests {
 
     #[test]
     fn string() {
-        // It makes error result! Please give a spec consideration.
-        // let mut h = helper(r#""str""#);
-        let mut h = helper(r#""str" "#); // last space is must needed for this token.
-        let res = h.next();
-        assert!(matches!(res, Ok(Some((_, Token::String(v)))) if v == "str"));
+        let mut h = helper(r#""str" "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::String(v)))) if v == "str"));
     }
 }
