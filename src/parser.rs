@@ -371,3 +371,36 @@ pub fn parse_statement(
     };
     Ok(Some(ret))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lexer::*;
+
+    struct TestHelper {
+        log: Vec<String>,
+        lex: Lexer,
+    }
+
+    impl TestHelper {
+        fn new(s: &'static str) -> TestHelper {
+            let log = Vec::new();
+            let lex = Lexer::new(Box::new(std::io::BufReader::new(s.as_bytes())), false);
+            TestHelper { log, lex }
+        }
+
+        fn parse(&mut self) -> Result<Option<Statement>, Error> {
+            parse_statement(&mut self.lex, &mut self.log)
+        }
+    }
+
+    fn helper(s: &'static str) -> TestHelper {
+        TestHelper::new(s)
+    }
+
+    #[test]
+    fn empty_statement() {
+        let mut h = helper(r#"; "#);
+        assert!(matches!(h.parse(), Ok(Some(Statement::Expression(None)))));
+    }
+}
