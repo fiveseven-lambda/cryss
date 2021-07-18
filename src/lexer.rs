@@ -522,4 +522,23 @@ mod tests {
         let mut h = helper(r#""str" "#);
         assert!(matches!(h.next(), Ok(Some((_, Token::String(v)))) if v == "str"));
     }
+
+    #[test]
+    fn keywords() {
+        let keywords = [
+            ("let ", Token::KeywordLet),
+            ("break ", Token::KeywordBreak),
+            ("continue ", Token::KeywordContinue),
+            ("if ", Token::KeywordIf),
+            ("else ", Token::KeywordElse),
+            ("for ", Token::KeywordFor),
+            ("return ", Token::KeywordReturn),
+            ("def ", Token::KeywordDef),
+        ];
+
+        keywords.iter().for_each(|(op, tk)| {
+            let mut h = helper(op);
+            assert!(matches!(h.next(), Ok(Some((_, t))) if &t == tk));
+        })
+    }
 }

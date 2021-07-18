@@ -1,7 +1,7 @@
 //! cryss で使用されるトークン
 
 /// トークン
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Token {
     /// 識別子．
     Identifier(String),
