@@ -95,10 +95,10 @@ impl Argument {
     }
     fn evaluate(self) -> sound::Argument {
         match self {
-            Argument::Real(rc, expr) => sound::Argument::Real(rc.clone(), expr.evaluate()),
-            Argument::Boolean(rc, expr) => sound::Argument::Boolean(rc.clone(), expr.evaluate()),
-            Argument::Sound(rc, expr) => sound::Argument::Sound(rc.clone(), expr.evaluate()),
-            Argument::String(rc, expr) => sound::Argument::String(rc.clone(), expr.evaluate()),
+            Argument::Real(rc, expr) => sound::Argument::Real(rc, expr.evaluate()),
+            Argument::Boolean(rc, expr) => sound::Argument::Boolean(rc, expr.evaluate()),
+            Argument::Sound(rc, expr) => sound::Argument::Sound(rc, expr.evaluate()),
+            Argument::String(rc, expr) => sound::Argument::String(rc, expr.evaluate()),
         }
     }
 }
@@ -244,7 +244,7 @@ impl Evaluatable for SoundExpression {
             }
             SoundExpression::Real(expr) => Sound::Const(expr.evaluate()),
             SoundExpression::Apply(fnc, arguments, sounds) => Sound::Apply(
-                fnc.clone(),
+                fnc,
                 arguments.into_iter().map(Argument::evaluate).collect(),
                 sounds
                     .into_iter()

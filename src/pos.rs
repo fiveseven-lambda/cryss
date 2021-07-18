@@ -77,7 +77,7 @@ impl Pos {
     pub fn print<W: std::io::Write>(
         &self,
         w: &mut W,
-        log: &Vec<String>,
+        log: &[String],
     ) -> Result<(), std::io::Error> {
         let (line, byte) = self.into_inner();
         write!(w, "{} !-> {}", &log[line][..byte], &log[line][byte..])
@@ -88,7 +88,7 @@ impl Range {
     pub fn print<W: std::io::Write>(
         &self,
         w: &mut W,
-        log: &Vec<String>,
+        log: &[String],
     ) -> Result<(), std::io::Error> {
         let start = &self.start;
         let end = &self.end;

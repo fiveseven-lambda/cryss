@@ -128,11 +128,11 @@ impl Sound {
                 SoundIter::Rem(left.iter(samplerate).into(), right.iter(samplerate).into())
             }
             Sound::Apply(function, arguments, sounds) => SoundIter::Apply(
-                function.clone(),
-                arguments.clone(),
+                function,
+                arguments,
                 sounds
                     .into_iter()
-                    .map(|(rc, sound)| (rc.clone(), sound.iter(samplerate)))
+                    .map(|(rc, sound)| (rc, sound.iter(samplerate)))
                     .collect(),
             ),
         }

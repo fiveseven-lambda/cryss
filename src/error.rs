@@ -47,7 +47,7 @@ impl Error {
     pub fn print<Write: std::io::Write>(
         &self,
         w: &mut Write,
-        log: &Vec<String>,
+        log: &[String],
     ) -> Result<(), std::io::Error> {
         write!(w, "error: ")?;
         match self {

@@ -189,6 +189,7 @@ def_binary_operator! {
 /// 名前つき引数（ identifier `=` expr の形式）
 ///
 /// 最後のカンマはあってもなくてもいい
+#[allow(clippy::type_complexity)]
 fn parse_invocation_arguments(
     lexer: &mut lexer::Lexer,
     log: &mut Vec<String>,

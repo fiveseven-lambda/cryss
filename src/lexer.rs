@@ -52,7 +52,7 @@ impl Inner {
         let mut prev = None;
         while let Some((index, c)) = iter.next() {
             let pos = pos::Pos::new(line_num, index);
-            if self.comment.len() > 0 {
+            if self.comment.is_empty() {
                 // 今はブロックコメントの途中．
                 if c == '*' {
                     if let Some((_, '/')) = iter.peek() {
@@ -85,24 +85,22 @@ impl Inner {
                     prev = Some((start, State::String(string)));
                     continue;
                 }
-            } else {
-                if let Some((_, string)) = &mut self.string {
-                    // 文字列の途中．
-                    string.push(match c {
-                        '\\' => match iter.next().ok_or(Error::NoCharacterAfterBackSlash(pos))?.1 {
-                            // エスケープ
-                            'n' => '\n',
-                            'r' => '\r',
-                            't' => '\t',
-                            '0' => '\0',
-                            // バックスラッシュの直後の文字を push
-                            // `"` や `'` のエスケープを含む
-                            c => c,
-                        },
+            } else if let Some((_, string)) = &mut self.string {
+                // 文字列の途中．
+                string.push(match c {
+                    '\\' => match iter.next().ok_or(Error::NoCharacterAfterBackSlash(pos))?.1 {
+                        // エスケープ
+                        'n' => '\n',
+                        'r' => '\r',
+                        't' => '\t',
+                        '0' => '\0',
+                        // バックスラッシュの直後の文字を push
+                        // `"` や `'` のエスケープを含む
                         c => c,
-                    });
-                    continue;
-                }
+                    },
+                    c => c,
+                });
+                continue;
             }
             prev = match prev {
                 Some((start, prev_state)) => {
@@ -392,15 +390,12 @@ impl Lexer {
             let result = self.inner.run(log.len(), &line, &mut self.queue);
             log.push(line);
             result.map(|()| true)
+        } else if let Some(pos) = self.inner.comment.pop() {
+            Err(Error::UnterminatedComment(pos))
+        } else if let Some((pos, _)) = self.inner.string.take() {
+            Err(Error::UnterminatedStringLiteral(pos))
         } else {
-            // ファイルの末尾に達した．
-            return if let Some(pos) = self.inner.comment.pop() {
-                Err(Error::UnterminatedComment(pos))
-            } else if let Some((pos, _)) = self.inner.string.take() {
-                Err(Error::UnterminatedStringLiteral(pos))
-            } else {
-                Ok(false)
-            };
+            Ok(false)
         }
     }
     /// 次のトークンを返す．
