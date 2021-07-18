@@ -484,6 +484,12 @@ mod tests {
     }
 
     #[test]
+    fn parameter() {
+        let mut h = helper(r#"$param "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Parameter(v)))) if v == "$param"));
+    }
+
+    #[test]
     fn string() {
         let mut h = helper(r#""str" "#);
         assert!(matches!(h.next(), Ok(Some((_, Token::String(v)))) if v == "str"));
