@@ -455,7 +455,7 @@ mod tests {
         fn new(s: &'static str) -> TestHelper {
             let log = Vec::new();
             let lex = Lexer::new(Box::new(std::io::BufReader::new(s.as_bytes())), false);
-            TestHelper{ log, lex }
+            TestHelper { log, lex }
         }
 
         fn next(&mut self) -> Result<Option<(pos::Range, Token)>, Error> {
@@ -463,7 +463,9 @@ mod tests {
         }
     }
 
-    fn helper(s: &'static str) -> TestHelper { TestHelper::new(s) }
+    fn helper(s: &'static str) -> TestHelper {
+        TestHelper::new(s)
+    }
 
     fn nearly(actual: f64, expected: f64, err: f64) -> bool {
         (expected - err < actual) && (actual < expected + err)
