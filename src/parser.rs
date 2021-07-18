@@ -371,3 +371,495 @@ pub fn parse_statement(
     };
     Ok(Some(ret))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lexer::*;
+
+    struct TestHelper {
+        log: Vec<String>,
+        lex: Lexer,
+    }
+
+    impl TestHelper {
+        fn new(s: &'static str) -> TestHelper {
+            let log = Vec::new();
+            let lex = Lexer::new(Box::new(std::io::BufReader::new(s.as_bytes())), false);
+            TestHelper { log, lex }
+        }
+
+        fn parse_statement(&mut self) -> Result<Option<Statement>, Error> {
+            parse_statement(&mut self.lex, &mut self.log)
+        }
+
+        fn parse_expression(&mut self) -> Result<Parsed<Option<Expression>>, Error> {
+            parse_expression(&mut self.lex, &mut self.log)
+        }
+    }
+
+    fn helper(s: &'static str) -> TestHelper {
+        TestHelper::new(s)
+    }
+
+    #[test]
+    fn empty_statement() {
+        let mut h = helper(r#"; "#);
+        assert!(matches!(
+            h.parse_statement(),
+            Ok(Some(Statement::Expression(None)))
+        ));
+    }
+
+    #[test]
+    fn expression_statement() {
+        let mut h = helper(r#"1 + 1; "#);
+        assert!(matches!(
+            h.parse_statement(),
+            Ok(Some(Statement::Expression(Some(_))))
+        ));
+    }
+
+    #[test]
+    fn substitution_statement() {
+        let mut h = helper(r#"x = 1; "#);
+        assert!(
+            matches!(h.parse_statement(), Ok(Some(Statement::Substitution(_, name, _))) if name == "x")
+        );
+    }
+
+    #[test]
+    fn let_statement() {
+        let mut h = helper(r#"let x = 1; "#);
+        assert!(
+            matches!(h.parse_statement(), Ok(Some(Statement::Declaration(_, name, _))) if name == "x")
+        );
+    }
+
+    #[test]
+    fn block_statement() {
+        let mut h = helper(r#"{ a; b; c; } "#);
+        assert!(matches!(h.parse_statement(), Ok(Some(Statement::Block(_)))));
+    }
+
+    #[test]
+    fn if_statement() {
+        let mut h = helper(r#"if ( true ) 1; "#);
+        assert!(matches!(
+            h.parse_statement(),
+            Ok(Some(Statement::If(_, _, None)))
+        ));
+    }
+
+    #[test]
+    fn if_else_statement() {
+        // I feel little bit strange from this syntax
+        let mut h = helper(r#"if ( true ) 1 ; else 2 ; "#);
+        // let mut h = helper(r#"if ( true ) 1 else 2 ; "#);
+        assert!(matches!(
+            h.parse_statement(),
+            Ok(Some(Statement::If(_, _, Some(_))))
+        ));
+    }
+
+    #[test]
+    fn while_statement() {
+        // I feel little bit strange from this syntax
+        let mut h = helper(r#"while ( true ) 1 ; "#);
+        // let mut h = helper(r#"if ( true ) 1 else 2 ; "#);
+        assert!(matches!(
+            h.parse_statement(),
+            Ok(Some(Statement::While(_, _)))
+        ));
+    }
+
+    #[test]
+    fn break_statement() {
+        let mut h = helper(r#"break ; "#);
+        assert!(matches!(h.parse_statement(), Ok(Some(Statement::Break(_)))));
+    }
+
+    #[test]
+    fn continue_statement() {
+        let mut h = helper(r#"continue ; "#);
+        assert!(matches!(
+            h.parse_statement(),
+            Ok(Some(Statement::Continue(_)))
+        ));
+    }
+
+    #[test]
+    fn return_statement() {
+        let mut h = helper(r#"return ; "#);
+        assert!(matches!(
+            h.parse_statement(),
+            Ok(Some(Statement::Return(_, None)))
+        ));
+    }
+
+    #[test]
+    fn return_statement_with_retval() {
+        let mut h = helper(r#"return 1; "#);
+        assert!(matches!(
+            h.parse_statement(),
+            Ok(Some(Statement::Return(_, Some(_))))
+        ));
+    }
+
+    #[test]
+    fn parse_identifier() {
+        let mut h = helper(r#"ident "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((Some(Expression{ range: _, node: Node::Identifier(name) }), _)) if name == "ident"
+        ));
+    }
+
+    #[test]
+    fn parse_invocation() {
+        let mut h = helper(r#"ident() "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((Some(Expression{ range: _, node: Node::Invocation(name, _, _) }), _)) if name == "ident"
+        ));
+    }
+
+    #[test]
+    fn parse_parameter() {
+        let mut h = helper(r#"$param "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((Some(Expression{ range: _, node: Node::Parameter(name) }), _)) if name == "$param"
+        ));
+    }
+
+    #[test]
+    fn parse_number() {
+        let mut h = helper(r#"123.4 "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Number(_)
+                }),
+                _
+            ))
+        ));
+    }
+
+    #[test]
+    fn parse_string() {
+        let mut h = helper(r#""abc" "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::String(_)
+                }),
+                _
+            ))
+        ));
+    }
+
+    #[test]
+    fn parse_print() {
+        let mut h = helper(r#"x? "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Print(_)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_minus() {
+        let mut h = helper(r#"-x "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Minus(_),
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_reciprocal() {
+        let mut h = helper(r#"/x "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Reciprocal(_)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_not() {
+        let mut h = helper(r#"!x "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Not(_)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_add() {
+        let mut h = helper(r#"x+y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Add(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_sub() {
+        let mut h = helper(r#"x-y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Sub(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_mul() {
+        let mut h = helper(r#"x*y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Mul(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_div() {
+        let mut h = helper(r#"x/y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Div(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_rem() {
+        let mut h = helper(r#"x%y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Rem(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_pow() {
+        let mut h = helper(r#"x^y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Pow(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_leftshift() {
+        let mut h = helper(r#"x<<y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::LeftShift(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_rightshift() {
+        let mut h = helper(r#"x>>y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::RightShift(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_less() {
+        let mut h = helper(r#"x<y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Less(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_greater() {
+        let mut h = helper(r#"x>y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Greater(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_equal() {
+        let mut h = helper(r#"x==y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Equal(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_notequal() {
+        let mut h = helper(r#"x!=y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::NotEqual(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_and() {
+        let mut h = helper(r#"x&&y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::And(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_or() {
+        let mut h = helper(r#"x||y "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Or(_, _)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_group() {
+        let mut h = helper(r#"(x) "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Group(_)
+                }),
+                _
+            )),
+        ));
+    }
+
+    #[test]
+    fn parse_score() {
+        let mut h = helper(r#"[a,x;b,y;c,z] "#);
+        assert!(matches!(
+            h.parse_expression(),
+            Ok((
+                Some(Expression {
+                    range: _,
+                    node: Node::Score(_)
+                }),
+                _
+            )),
+        ));
+    }
+}
