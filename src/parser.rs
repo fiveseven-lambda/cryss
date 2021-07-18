@@ -212,7 +212,7 @@ fn parse_invocation_arguments(
                         }
                         _ => return Err(Error::InvalidArgumentName(expr.range, equal)),
                     },
-                    None => return Err(Error::EmptyArgumentName(equal.clone())),
+                    None => return Err(Error::EmptyArgumentName(equal)),
                 };
             }
             _ => {
@@ -292,7 +292,7 @@ pub fn parse_statement(
             }
         }
         (None, Some((def, Token::KeywordDef))) => {
-            let (range, name) = match lexer.next(log)? {
+            let (_, _) = match lexer.next(log)? {
                 Some((range, Token::Identifier(name))) => (range, name),
                 Some((other, _)) => return Err(Error::UnexpectedTokenAfterKeyword(def, other)),
                 None => return Err(Error::UnexpectedEOFAfterKeyword(def)),
