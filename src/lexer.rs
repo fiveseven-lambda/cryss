@@ -465,6 +465,10 @@ mod tests {
 
     fn helper(s: &'static str) -> TestHelper { TestHelper::new(s) }
 
+    fn nearly(actual: f64, expected: f64, err: f64) -> bool {
+        (expected - err < actual) && (actual < expected + err)
+    }
+
     #[test]
     fn unterminated_comment() {
         let mut h = helper("/*");
@@ -487,6 +491,30 @@ mod tests {
     fn parameter() {
         let mut h = helper(r#"$param "#);
         assert!(matches!(h.next(), Ok(Some((_, Token::Parameter(v)))) if v == "$param"));
+    }
+
+    #[test]
+    fn number_integer() {
+        let mut h = helper(r#"123 "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 123.0, 0.05)));
+    }
+
+    #[test]
+    fn number_decimal() {
+        let mut h = helper(r#"123.4 "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 123.4, 0.05)));
+    }
+
+    #[test]
+    fn number_decimal_from_dot() {
+        let mut h = helper(r#".4 "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 0.4, 0.05)));
+    }
+
+    #[test]
+    fn number_scientific() {
+        let mut h = helper(r#"123.4e3 "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 123.4e3, 0.05)));
     }
 
     #[test]
