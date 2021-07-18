@@ -438,3 +438,48 @@ impl Lexer {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    struct TestHelper {
+        log: Vec<String>,
+        lex: Lexer,
+    }
+
+    impl TestHelper {
+        fn new(s: &'static str) -> TestHelper {
+            let log = Vec::new();
+            let lex = Lexer::new(Box::new(std::io::BufReader::new(s.as_bytes())), false);
+            TestHelper{ log, lex }
+        }
+
+        fn next(&mut self) -> Result<Option<(pos::Range, Token)>, Error> {
+            self.lex.next(&mut self.log)
+        }
+    }
+
+    fn helper(s: &'static str) -> TestHelper { TestHelper::new(s) }
+
+    #[test]
+    fn unterminated_comment() {
+        let mut h = helper("/*");
+        assert!(matches!(h.next(), Err(_)));
+    }
+
+    #[test]
+    fn unterminated_string_literal() {
+        let mut h = helper("\"");
+        assert!(matches!(h.next(), Err(_)));
+    }
+
+    #[test]
+    fn string() {
+        // It makes error result! Please give a spec consideration.
+        // let mut h = helper(r#""str""#);
+        let mut h = helper(r#""str" "#); // last space is must needed for this token.
+        let res = h.next();
+        assert!(matches!(res, Ok(Some((_, Token::String(v)))) if v == "str"));
+    }
+}
