@@ -25,9 +25,6 @@ impl Pos {
     pub fn new(line: usize, byte: usize) -> Pos {
         Pos { line, byte }
     }
-    pub fn into_inner(&self) -> (usize, usize) {
-        (self.line, self.byte)
-    }
     pub fn byte(&self) -> usize {
         self.byte
     }
@@ -79,7 +76,7 @@ impl Pos {
         w: &mut W,
         log: &[String],
     ) -> Result<(), std::io::Error> {
-        let (line, byte) = self.into_inner();
+        let Pos { line, byte } = *self;
         write!(w, "{} !-> {}", &log[line][..byte], &log[line][byte..])
     }
 }
