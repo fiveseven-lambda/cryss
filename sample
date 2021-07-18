@@ -9,7 +9,7 @@ let Adsr =
     * min(1, Exp(-.1) >> 2);      // リリース
 write(Adsr, 3, "adsr.wav");
 
-let Kick = 4e+5 * Sin(1e-3) * Exp(-1e-3); // キック
+let Kick = 1.6e+4 * Sin(5e-3) * Exp(-5e-3); // キック
 write(Kick, 1, "kick.wav");
 let Snare = .5 * (Rand * 2 - 1 + sin(300 * PI * Exp(-.5) * .5)) * Exp(-.01); // スネア
 write(Snare, 1, "snare.wav");

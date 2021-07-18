@@ -36,7 +36,7 @@ fn parse_factor(
         Some((range, Token::Number(value))) => Expression::new(range, Node::Number(value)),
         Some((range, Token::String(string))) => Expression::new(range, Node::String(string)),
         // 前置 `-` （負号）
-        Some((op, Token::Minus)) => {
+        Some((op, Token::Hyphen)) => {
             let mut ret = parse_print(lexer, log)?;
             ret.0 = match ret.0 {
                 Some(expr) => Expression::new(op + &expr.range, Node::Minus(expr.into())).into(),
@@ -161,7 +161,7 @@ def_binary_operator! {
     / "引き算 `-`"
     parse_operator3 => parse_operator4:
         Token::Plus => Node::Add,
-        Token::Minus => Node::Sub,
+        Token::Hyphen => Node::Sub,
 }
 def_binary_operator! {
     / "比較演算子 `<`, `>`"
@@ -288,7 +288,12 @@ pub fn parse_statement(
                 (Some(expr), _) => return Err(Error::NoSemicolonAtEndOfStatement(expr.range)),
             }
         }
-        (None, Some((r#def, Token::KeywordDef))) => {
+        (None, Some((def, Token::KeywordDef))) => {
+            let (range, name) = match lexer.next(log)? {
+                Some((range, Token::Identifier(name))) => (range, name),
+                Some((other, _)) => return Err(Error::UnexpectedTokenAfterKeyword(def, other)),
+                None => return Err(Error::UnexpectedEOFAfterKeyword(def)),
+            };
             todo!();
         }
         (None, Some((r#if, Token::KeywordIf))) => {

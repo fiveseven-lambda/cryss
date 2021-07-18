@@ -87,8 +87,6 @@ impl Sound {
             ),
         }
     }
-    /// 本当は `&self` じゃなくて `self` にしたい．
-    /// だめな理由を考えて，なければ `self` に
     pub fn iter(self, samplerate: f64) -> SoundIter {
         match self {
             Sound::Const(value) => SoundIter::Const(value),

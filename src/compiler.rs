@@ -436,8 +436,8 @@ pub fn compile_statement<Expr: program::Evaluatable>(
                 .transpose()?;
             program::Statement::If(cond, stmt1.into(), stmt2.into())
         }
-        syntax::Statement::Break(r#break) => todo!(),
-        syntax::Statement::Continue(r#continue) => todo!(),
+        syntax::Statement::Break(_) => todo!(),
+        syntax::Statement::Continue(_) => todo!(),
         syntax::Statement::Return(r#return, expr) => {
             let expr = expr
                 .map(|expr| compile_expression(expr, variables, functions))
@@ -449,6 +449,9 @@ pub fn compile_statement<Expr: program::Evaluatable>(
                 }
                 Err(None) => return Err(Error::EmptyExpressionReturn(r#return)),
             }
+        }
+        syntax::Statement::Definition(_, _, _) => {
+            todo!();
         }
     })
 }

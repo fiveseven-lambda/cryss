@@ -26,7 +26,9 @@ pub enum Token {
     /// `+`: 足し算
     Plus,
     /// `-`: （ 2 項）引き算，（単項）負号
-    Minus,
+    Hyphen,
+    /// `->`: 右矢印
+    HyphenGreater,
     /// `*`: 掛け算
     Asterisk,
     /// `/`: 割り算，（単項）逆数
@@ -38,7 +40,7 @@ pub enum Token {
     /// `=`: 代入
     Equal,
     /// `=>`: 右代入
-    RightArrow,
+    EqualGreater,
     /// `==`: 等しい
     DoubleEqual,
     /// `!`: 論理否定

@@ -74,6 +74,8 @@ pub enum Statement {
     Break(pos::Range),
     Continue(pos::Range),
     Return(pos::Range, Option<Expression>),
+    /// 関数定義
+    Definition(pos::Range, String, Box<Statement>),
 }
 
 use std::fmt::{Debug, Formatter, Result as FResult};
