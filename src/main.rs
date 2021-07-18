@@ -36,10 +36,18 @@ fn main() {
         match parser::parse_statement(&mut lexer, &mut log) {
             Ok(Some(statement)) => match environment.run(statement) {
                 Ok(()) => {}
-                Err(err) => break err.print(&log),
+                Err(err) => {
+                    break err
+                        .print(&mut std::io::stderr(), &log)
+                        .expect("cannot print error message")
+                }
             },
             Ok(None) => break,
-            Err(err) => break err.print(&log),
+            Err(err) => {
+                break err
+                    .print(&mut std::io::stderr(), &log)
+                    .expect("cannot print error message")
+            }
         }
     }
 }

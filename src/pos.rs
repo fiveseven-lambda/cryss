@@ -74,39 +74,50 @@ impl Debug for Range {
 
 impl Pos {
     /// エラーが起こっている行を出力．
-    pub fn print(&self, log: &Vec<String>) {
+    pub fn print<W: std::io::Write>(
+        &self,
+        w: &mut W,
+        log: &Vec<String>,
+    ) -> Result<(), std::io::Error> {
         let (line, byte) = self.into_inner();
-        print!("{} !-> {}", &log[line][..byte], &log[line][byte..]);
+        write!(w, "{} !-> {}", &log[line][..byte], &log[line][byte..])
     }
 }
 impl Range {
     /// エラーが起こっている行を出力．
-    pub fn print(&self, log: &Vec<String>) {
+    pub fn print<W: std::io::Write>(
+        &self,
+        w: &mut W,
+        log: &Vec<String>,
+    ) -> Result<(), std::io::Error> {
         let start = &self.start;
         let end = &self.end;
         if start.line == end.line {
             // 一行の場合
-            print!(
+            write!(
+                w,
                 "{} !-> {} <-! {}",
                 &log[start.line][..start.byte],
                 &log[start.line][start.byte..end.byte],
                 &log[end.line][end.byte..]
-            );
+            )
         } else {
             // 複数行にわたる場合
-            print!(
+            write!(
+                w,
                 "{} !-> {}",
                 &log[start.line][..start.byte],
                 &log[start.line][start.byte..]
-            );
+            )?;
             for row in &log[start.line + 1..end.line] {
-                print!("{}", row);
+                write!(w, "{}", row)?;
             }
-            print!(
+            write!(
+                w,
                 "{} <-! {}",
                 &log[end.line][..end.byte],
                 &log[end.line][end.byte..]
-            );
+            )
         }
     }
 }
