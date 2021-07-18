@@ -370,7 +370,9 @@ impl<Expr: Evaluatable + Clone> Statement<Expr> {
     pub fn run(self) -> Option<Expr::Output> {
         match self {
             Statement::Expression(expr) => {
-                expr.map(Expression::evaluate);
+                if let Some(expr) = expr {
+                    Expression::evaluate(expr)
+                }
                 None
             }
             Statement::RealSubstitution(rc, expr) => {

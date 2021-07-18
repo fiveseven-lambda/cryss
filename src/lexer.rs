@@ -165,7 +165,7 @@ impl Inner {
                                     match line[start.byte()..index].parse() {
                                         Ok(value) => Token::Number(value),
                                         Err(err) => {
-                                            return Err(Error::ParseFloatError(
+                                            return Err(Error::ParseFloatFailure(
                                                 pos::Range::new(start, pos),
                                                 err,
                                             ))

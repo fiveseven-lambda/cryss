@@ -12,7 +12,7 @@ pub enum Error {
     IncompleteScientificNotation(pos::Range),
     SingleAmpersand(pos::Range),
     SingleDot(pos::Range),
-    ParseFloatError(pos::Range, std::num::ParseFloatError),
+    ParseFloatFailure(pos::Range, std::num::ParseFloatError),
     UnclosedBracketUntil(pos::Range, pos::Range),
     UnclosedBracketUntilEOF(pos::Range),
     EmptyArgumentName(pos::Range),
@@ -82,7 +82,7 @@ impl Error {
                 writeln!(w, "single dot at {}", range)?;
                 range.print(w, log)
             }
-            Error::ParseFloatError(range, err) => {
+            Error::ParseFloatFailure(range, err) => {
                 writeln!(w, "failed to parse number at {} ({})", range, err)?;
                 range.print(w, log)
             }

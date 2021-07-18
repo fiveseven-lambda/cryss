@@ -214,7 +214,7 @@ fn parse_invocation_arguments(
                 }
             }
             _ => {
-                item.map(|item| vec.push(item));
+                vec.extend(item);
                 return Ok(((vec, map), end));
             }
         }
@@ -229,7 +229,7 @@ fn parse_list1(
     let mut vec = Vec::new();
     loop {
         let (item, end) = parse_expression(lexer, log)?;
-        item.map(|item| vec.push(item));
+        vec.extend(item);
         if !matches!(end, Some((_, Token::Comma))) {
             return Ok((vec, end));
         }
