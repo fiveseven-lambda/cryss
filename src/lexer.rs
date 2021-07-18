@@ -478,6 +478,12 @@ mod tests {
     }
 
     #[test]
+    fn identifier() {
+        let mut h = helper(r#"ident "#);
+        assert!(matches!(h.next(), Ok(Some((_, Token::Identifier(v)))) if v == "ident"));
+    }
+
+    #[test]
     fn string() {
         let mut h = helper(r#""str" "#);
         assert!(matches!(h.next(), Ok(Some((_, Token::String(v)))) if v == "str"));
