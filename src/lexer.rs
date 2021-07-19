@@ -539,42 +539,49 @@ mod tests {
     fn identifier() {
         let mut h = helper(r#"ident "#);
         assert!(matches!(h.next(), Ok(Some((_, Token::Identifier(v)))) if v == "ident"));
+        assert!(matches!(h.next(), Ok(None)));
     }
 
     #[test]
     fn parameter() {
         let mut h = helper(r#"$param "#);
         assert!(matches!(h.next(), Ok(Some((_, Token::Parameter(v)))) if v == "$param"));
+        assert!(matches!(h.next(), Ok(None)));
     }
 
     #[test]
     fn number_integer() {
         let mut h = helper(r#"123 "#);
         assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 123.0, 0.05)));
+        assert!(matches!(h.next(), Ok(None)));
     }
 
     #[test]
     fn number_decimal() {
         let mut h = helper(r#"123.4 "#);
         assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 123.4, 0.05)));
+        assert!(matches!(h.next(), Ok(None)));
     }
 
     #[test]
     fn number_decimal_from_dot() {
         let mut h = helper(r#".4 "#);
         assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 0.4, 0.05)));
+        assert!(matches!(h.next(), Ok(None)));
     }
 
     #[test]
     fn number_scientific() {
         let mut h = helper(r#"123.4e3 "#);
         assert!(matches!(h.next(), Ok(Some((_, Token::Number(v)))) if nearly(v, 123.4e3, 0.05)));
+        assert!(matches!(h.next(), Ok(None)));
     }
 
     #[test]
     fn string() {
         let mut h = helper(r#""str" "#);
         assert!(matches!(h.next(), Ok(Some((_, Token::String(v)))) if v == "str"));
+        assert!(matches!(h.next(), Ok(None)));
     }
 
     #[test]
@@ -593,6 +600,7 @@ mod tests {
         keywords.iter().for_each(|(op, tk)| {
             let mut h = helper(op);
             assert!(matches!(h.next(), Ok(Some((_, t))) if &t == tk));
+            assert!(matches!(h.next(), Ok(None)));
         })
     }
 
@@ -615,7 +623,7 @@ mod tests {
             ("<< ", Token::DoubleLess),
             ("> ", Token::Greater),
             (">> ", Token::DoubleGreater),
-            // ("& ", Token::Ampersand), // there are no SingleAmpersand token.
+            // ("& ", Token::Ampersand), // there are no SingleAmpersand tokens.
             ("&& ", Token::DoubleAmpersand),
             ("| ", Token::Bar),
             ("|| ", Token::DoubleBar),
@@ -634,6 +642,7 @@ mod tests {
         ops.iter().for_each(|(op, tk)| {
             let mut h = helper(op);
             assert!(matches!(h.next(), Ok(Some((_, t))) if &t == tk));
+            assert!(matches!(h.next(), Ok(None)));
         })
     }
 }
