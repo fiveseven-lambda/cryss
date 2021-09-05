@@ -1,230 +1,39 @@
-//! エラー出力のためのモジュール
+//! エラー
+//!
+//! 使用時： `use crate::error::Error`
 
 use crate::pos;
-use crate::types::Type;
 
 pub enum Error {
+    /// 字句解析中に予期せぬ文字が現れた．
     UnexpectedCharacter(pos::Pos),
-    NoCharacterAfterBackSlash(pos::Pos),
-    UnterminatedComment(pos::Pos),
-    UnterminatedStringLiteral(pos::Pos),
-    NoLineFeedAtEOF,
-    IncompleteScientificNotation(pos::Range),
-    SingleAmpersand(pos::Range),
-    SingleDot(pos::Range),
-    ParseFloatFailure(pos::Range, std::num::ParseFloatError),
-    UnclosedBracketUntil(pos::Range, pos::Range),
-    UnclosedBracketUntilEOF(pos::Range),
-    EmptyArgumentName(pos::Range),
-    InvalidArgumentName(pos::Range, pos::Range),
-    UndefinedVariable(String, pos::Range),
-    UndefinedFunction(String, pos::Range),
-    EmptyOperandUnary(pos::Range),
-    EmptyOperandRight(pos::Range),
-    EmptyArgument(pos::Range),
-    EmptyNamedArgument(pos::Range),
-    EmptyParentheses(pos::Range, pos::Range),
-    EmptyRHS(pos::Range),
-    EmptyExpressionReturn(pos::Range),
-    TypeMismatchUnary(pos::Range, Type),
-    TypeMismatchBinary(pos::Range, Type, pos::Range, Type),
-    TypeMismatchCond(pos::Range, Type),
-    TypeMismatchReturn(pos::Range, Type),
-    WrongNumberOfArguments(pos::Range, usize, usize),
-    UnusedNamedArguments(pos::Range, Vec<String>),
-    TypeMismatchArgument(pos::Range, Type),
-    LHSNotIdentifier(pos::Range, pos::Range),
-    NoSemicolonAtEndOfStatement(pos::Range),
-    UnexpectedToken(pos::Range),
-    NoSubstitutionAfterLet(pos::Range),
-    UnexpectedTokenAfterKeyword(pos::Range, pos::Range),
-    UnexpectedEOFAfterKeyword(pos::Range),
-    UnexpectedEOFAfterCondition(pos::Range, pos::Range),
-    VoidRHS(pos::Range),
+    /// コメントの途中でファイル末尾に達した．
+    UnterminatedComment(pos::Pos /* 最後のコメント開始位置 */),
+    /// 文字列リテラルの途中でファイル末尾に達した．
+    UnterminatedStringLiteral(pos::Pos /*文字列リテラルの開始位置*/),
+    /// 無効なトークン：`0b` `0o` `0x`，指数表記の `e`|`E` (`+`|`-`)? の後に数が続かないもの．
+    InvalidToken(pos::Range),
 }
 
 impl Error {
-    pub fn print<Write: std::io::Write>(
-        &self,
-        w: &mut Write,
-        log: &[String],
-    ) -> Result<(), std::io::Error> {
-        write!(w, "error: ")?;
+    pub fn eprint(&self, log: &[String]) {
+        eprint!("error: ");
         match self {
             Error::UnexpectedCharacter(pos) => {
-                writeln!(w, "unexpected character at {}", pos)?;
-                pos.print(w, log)
-            }
-            Error::NoCharacterAfterBackSlash(pos) => {
-                writeln!(w, "no character after `\\` at {}", pos)?;
-                pos.print(w, log)
+                eprintln!("unexpected character at {}", pos);
+                pos.eprint(log);
             }
             Error::UnterminatedComment(pos) => {
-                writeln!(w, "unterminated comment (started at {})", pos)?;
-                pos.print(w, log)
+                eprintln!("unterminated comment started at {}", pos);
+                pos.eprint(log);
             }
             Error::UnterminatedStringLiteral(pos) => {
-                writeln!(w, "unterminated string literal (started at {})", pos)?;
-                pos.print(w, log)
+                eprintln!("unterminated string literal started at {}", pos);
+                pos.eprint(log);
             }
-            Error::NoLineFeedAtEOF => {
-                writeln!(w, "no line feed at end of file")
-            }
-            Error::IncompleteScientificNotation(range) => {
-                writeln!(w, "incomplete scientific notation at {}", range)?;
-                range.print(w, log)
-            }
-            Error::SingleAmpersand(range) => {
-                writeln!(w, "single ampersand at {}", range)?;
-                range.print(w, log)
-            }
-            Error::SingleDot(range) => {
-                writeln!(w, "single dot at {}", range)?;
-                range.print(w, log)
-            }
-            Error::ParseFloatFailure(range, err) => {
-                writeln!(w, "failed to parse number at {} ({})", range, err)?;
-                range.print(w, log)
-            }
-            Error::UnclosedBracketUntil(open, range) => {
-                writeln!(w, "unexpected token at {}", range)?;
-                range.print(w, log)?;
-                writeln!(w, "note: bracket opened at {}", open)?;
-                open.print(w, log)
-            }
-            Error::UnclosedBracketUntilEOF(open) => {
-                writeln!(w, "unexpected end of file")?;
-                writeln!(w, "note: bracket opened at {}", open)?;
-                open.print(w, log)
-            }
-            Error::EmptyArgumentName(equal) => {
-                writeln!(w, "empty argument name before `=` at {}", equal)?;
-                equal.print(w, log)
-            }
-            Error::InvalidArgumentName(range, equal) => {
-                writeln!(w, "invalid argument name at {}", range)?;
-                range.print(w, log)?;
-                writeln!(w, "before `=` at {}", equal)?;
-                equal.print(w, log)
-            }
-            Error::UndefinedVariable(name, range) => {
-                writeln!(w, "undefined variable {} at {}", name, range)?;
-                range.print(w, log)
-            }
-            Error::UndefinedFunction(name, range) => {
-                writeln!(w, "undefined function {} at {}", name, range)?;
-                range.print(w, log)
-            }
-            Error::EmptyOperandUnary(range) => {
-                writeln!(w, "empty operand of unary operator at {}", range)?;
-                range.print(w, log)
-            }
-            Error::EmptyOperandRight(range) => {
-                writeln!(w, "empty operand after binary operator at {}", range)?;
-                range.print(w, log)
-            }
-            Error::EmptyArgument(range) => {
-                writeln!(w, "empty argument before comma at {}", range)?;
-                range.print(w, log)
-            }
-            Error::EmptyNamedArgument(range) => {
-                writeln!(w, "empty argument after equal at {}", range)?;
-                range.print(w, log)
-            }
-            Error::EmptyParentheses(open, close) => {
-                writeln!(
-                    w,
-                    "empty expression between opening parenthesis at {}",
-                    open
-                )?;
-                open.print(w, log)?;
-                writeln!(w, "and closing parenthesis at {}", close)?;
-                close.print(w, log)
-            }
-            Error::EmptyExpressionReturn(range) => {
-                writeln!(w, "empty expression after `return` at {}", range)?;
-                range.print(w, log)
-            }
-            Error::TypeMismatchUnary(range, ty) => {
-                writeln!(w, "type mismatch at {} (found {})", range, ty)?;
-                range.print(w, log)
-            }
-            Error::TypeMismatchBinary(left, left_ty, right, right_ty) => {
-                writeln!(w, "type mismatch at {} (found {})", left, left_ty)?;
-                left.print(w, log)?;
-                writeln!(w, "and {} (found {})", right, right_ty)?;
-                right.print(w, log)
-            }
-            Error::TypeMismatchCond(cond, ty) => {
-                writeln!(w, "type mismatch at {} (found {})", cond, ty)?;
-                cond.print(w, log)
-            }
-            Error::TypeMismatchReturn(range, ty) => {
-                writeln!(w, "type mismatch after at {} (found {})", range, ty)?;
-                range.print(w, log)
-            }
-            Error::WrongNumberOfArguments(range, expected, found) => {
-                writeln!(
-                    w,
-                    "wrong number of arguments at {} (expected {}, found {})",
-                    range, expected, found
-                )?;
-                range.print(w, log)
-            }
-            Error::UnusedNamedArguments(range, names) => {
-                writeln!(
-                    w,
-                    "unused named arguments ({}) at {}",
-                    names.join(", "),
-                    range
-                )?;
-                range.print(w, log)
-            }
-            Error::TypeMismatchArgument(arg, ty) => {
-                writeln!(w, "type mismatch at {} (found {})", arg, ty)?;
-                arg.print(w, log)
-            }
-            Error::NoSemicolonAtEndOfStatement(range) => {
-                writeln!(w, "no semicolon at end of statement ({})", range)?;
-                range.print(w, log)
-            }
-            Error::UnexpectedToken(range) => {
-                writeln!(w, "unexpected token at {}", range)?;
-                range.print(w, log)
-            }
-            Error::LHSNotIdentifier(range, equal) => {
-                writeln!(w, "identifier required at {}", range)?;
-                range.print(w, log)?;
-                writeln!(w, "before `=` at {}", equal)?;
-                equal.print(w, log)
-            }
-            Error::EmptyRHS(equal) => {
-                writeln!(w, "empty expression after `=` at {}", equal)?;
-                equal.print(w, log)
-            }
-            Error::NoSubstitutionAfterLet(r#let) => {
-                writeln!(w, "no substitution after `let` at {}", r#let)?;
-                r#let.print(w, log)
-            }
-            Error::UnexpectedTokenAfterKeyword(keyword, token) => {
-                writeln!(w, "unexpected token at {}", token)?;
-                token.print(w, log)?;
-                writeln!(w, "after keyword at {}", keyword)?;
-                keyword.print(w, log)
-            }
-            Error::UnexpectedEOFAfterKeyword(keyword) => {
-                writeln!(w, "unexpected end of file after keyword at {}", keyword)?;
-                keyword.print(w, log)
-            }
-            Error::UnexpectedEOFAfterCondition(keyword, condition) => {
-                writeln!(w, "unexpected end of file after keyword at {}", keyword)?;
-                keyword.print(w, log)?;
-                writeln!(w, "and condition at {}", condition)?;
-                condition.print(w, log)
-            }
-            Error::VoidRHS(range) => {
-                writeln!(w, "void expression at rhs {}", range)?;
-                range.print(w, log)
+            Error::InvalidToken(range) => {
+                eprintln!("invalid token at {}", range);
+                range.eprint(log);
             }
         }
     }

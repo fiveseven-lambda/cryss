@@ -1,46 +1,42 @@
 //! cryss で使用されるトークン
+//!
+//! 使用時： `use crate::token`
 
 /// トークン
-#[derive(Debug, PartialEq)]
+///
+/// `derive(Debug)` はデバッグ用，いずれ消す
+#[derive(Debug)]
 pub enum Token {
     /// 識別子．
+    ///
+    /// `Identifier` ::= [`a`-`z` `A`-`Z` `_` `$`] [`a`-`z` `A`-`Z` `_` `$` `0`-`9`]+
     Identifier(String),
-    /// `$` で始まる
-    Parameter(String),
-    Number(f64),
+    /// 整数リテラル．
+    ///
+    /// `Integer` ::= [`0`-`9`]+ | `0b` [`0`-`1`]+ | `0o` [`0`-`7`]+ | `0x` [`0`-`9` `a`-`f` `A`-`F`]+
+    Integer(String),
+    /// 浮動小数点数リテラル．
+    ///
+    /// `Real` ::= `Integer` `Exponent` | `Decimal` `Exponent`?
+    /// where `Decimal` ::= [`0`-`9`]+ `.` [`0`-`9`]* | `.` [`0`-`9`]+
+    /// and `Exponent` ::= [`e` `E`] ([`+` `-`])? [`0`-`9`]
+    Real(String),
+    /// 文字列リテラル
     String(String),
-    KeywordLet,
-    KeywordBreak,
-    KeywordContinue,
-    /// キーワード `if`
-    KeywordIf,
-    /// キーワード `else`
-    KeywordElse,
-    /// キーワード `while`
-    KeywordWhile,
-    /// キーワード `for`
-    /// `for` 文の syntax は考え中
-    KeywordFor,
-    KeywordReturn,
-    KeywordDef,
     /// `+`: 足し算
     Plus,
     /// `-`: （ 2 項）引き算，（単項）負号
     Hyphen,
-    /// `->`: 右矢印
-    HyphenGreater,
     /// `*`: 掛け算
     Asterisk,
+    /// `**`: 累乗
+    DoubleAsterisk,
     /// `/`: 割り算，（単項）逆数
     Slash,
     /// `%`: 割った余り
     Percent,
-    /// `^`: 累乗
-    Circumflex,
     /// `=`: 代入
     Equal,
-    /// `=>`: 右代入
-    EqualGreater,
     /// `==`: 等しい
     DoubleEqual,
     /// `!`: 論理否定
@@ -49,18 +45,32 @@ pub enum Token {
     ExclamationEqual,
     /// `<`: より小さい
     Less,
-    /// `<<`: 左シフト（ Sound ）
+    /// `<=`: 以下
+    LessEqual,
+    /// `<<`: 左シフト
     DoubleLess,
+    /// `<<<`: backward シフト
+    TripleLess,
     /// `>`: より大きい
     Greater,
-    /// `>>`: 右シフト（ Sound ）
+    /// `>=`: 以上
+    GreaterEqual,
+    /// `>>`: 右シフト
     DoubleGreater,
+    /// `>>>`: forward シフト
+    TripleGreater,
+    /// `&`: ビット and
+    Ampersand,
     /// `&&`: 論理積
     DoubleAmpersand,
-    /// `|`
+    /// `|`: ビット or
     Bar,
     /// `||`: 論理和
     DoubleBar,
+    /// `^`: ビット xor
+    Circumflex,
+    /// `.`
+    Dot,
     /// `:`
     Colon,
     /// `;`

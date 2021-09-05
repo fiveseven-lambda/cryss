@@ -1,21 +1,28 @@
-//! エラーに位置情報をもたせるためのモジュール．元のテキストの復元も担う
+//! エラーに位置情報をもたせるためのモジュール．
+//!
+//! 使用時： `use crate::pos`
 
-/// ソースコード中での文字の位置（ `line` 行目， `byte` バイト目）を 0-indexed で表す．
+/// ソースコード中の文字の位置を表す．
 ///
-/// `derive(Ord)` は，
-/// `Range::new()` や `impl Add for Range` において
-/// 前後がひっくり返っていないか
-/// `debug_assert` する用
+/// `line` 行目， `byte` バイト目の組．
+/// 内部では 0-indexed．
+///
+/// `derive(Clone)`：
+/// 式の `Range` を，構成する式やトークンの `Range` から得る際に使う
+///
+/// `derive(Ord)`：
+/// `Range::new()` や `Range: std::ops::Add` において
+/// 前後がひっくり返っていないか assert する用
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Pos {
-    /// line number
     line: usize,
-    /// byte index
     byte: usize,
 }
 
-/// ソースコード中でのトークンや式（複数文字／複数行にわたる）の位置を， `start` から `end` までの半開区間として表す．
-#[derive(Clone)]
+/// ソースコード中のトークンや式の位置を表す．
+///
+/// 始まり `start: Pos` と終わり `end: Pos` の組．
+/// `start` を含み `end` を含まない半開区間．
 pub struct Range {
     start: Pos,
     end: Pos,
@@ -29,6 +36,7 @@ impl Pos {
         self.byte
     }
 }
+
 impl Range {
     pub fn new(start: Pos, end: Pos) -> Range {
         debug_assert!(start <= end);
@@ -70,47 +78,31 @@ impl Debug for Range {
 }
 
 impl Pos {
-    /// エラーが起こっている行を出力．
-    pub fn print<W: std::io::Write>(
-        &self,
-        w: &mut W,
-        log: &[String],
-    ) -> Result<(), std::io::Error> {
-        let Pos { line, byte } = *self;
-        write!(w, "{} !-> {}", &log[line][..byte], &log[line][byte..])
+    pub fn eprint(&self, log: &[String]) {
+        let &Pos { line, byte } = self;
+        eprint!("{} !-> {}", &log[line][..byte], &log[line][byte..])
     }
 }
 impl Range {
-    /// エラーが起こっている行を出力．
-    pub fn print<W: std::io::Write>(
-        &self,
-        w: &mut W,
-        log: &[String],
-    ) -> Result<(), std::io::Error> {
-        let start = &self.start;
-        let end = &self.end;
+    pub fn eprint(&self, log: &[String]) {
+        let Range { start, end } = self;
         if start.line == end.line {
-            // 一行の場合
-            write!(
-                w,
+            eprint!(
                 "{} !-> {} <-! {}",
                 &log[start.line][..start.byte],
                 &log[start.line][start.byte..end.byte],
                 &log[end.line][end.byte..]
-            )
+            );
         } else {
-            // 複数行にわたる場合
-            write!(
-                w,
+            eprint!(
                 "{} !-> {}",
                 &log[start.line][..start.byte],
                 &log[start.line][start.byte..]
-            )?;
+            );
             for row in &log[start.line + 1..end.line] {
-                write!(w, "{}", row)?;
+                eprint!("{}", row);
             }
-            write!(
-                w,
+            eprint!(
                 "{} <-! {}",
                 &log[end.line][..end.byte],
                 &log[end.line][end.byte..]
