@@ -25,237 +25,115 @@ impl LineLexer {
                     None => return Ok(()),
                 }
             };
-            match first {
+            let range_gen = |end: Option<&(usize, char)>| {
+                pos::Range::from_line_byte(line_num, start, end.map(|&(i, _)| i))
+            };
+            let token = match first {
                 'a'..='z' | 'A'..='Z' | '_' | '$' => {
                     let mut s = first.to_string();
-                    let end = loop {
-                        match iter.peek() {
-                            Some(&(_, c @ ('a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$'))) => {
-                                s.push(c)
-                            }
-                            Some(&(i, _)) => break Some(i),
-                            None => break None,
-                        }
+                    while let Some(&(_, c @ ('a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$'))) =
+                        iter.peek()
+                    {
+                        s.push(c);
                         iter.next();
-                    };
-                    tokens.push_back((
-                        pos::Range::from_line_byte(line_num, start, end),
-                        token::Token::Identifier(s),
-                    ));
+                    }
+                    token::Token::Identifier(s)
                 }
                 '0'..='9' | '.' => {
                     enum State {
                         Zero,
-                        BinIntIncomplete,
                         BinInt(String),
-                        BinIntSuffix(String, String),
-                        OctIntIncomplete,
                         OctInt(String),
-                        OctIntSuffix(String, String),
                         DecInt(String),
-                        DecIntSuffix(String, String),
-                        HexIntIncomplete,
                         HexInt(String),
-                        HexIntSuffix(String, String),
                         Dot,
                         Decimal(String),
-                        ScientificIncomplete(String),
-                        ScientificIncompleteSign(String),
-                        Scientific(String),
-                        FloatSuffix(String, String),
+                        SciE(String),
+                        SciSign(String),
+                        Sci(String),
                     }
-
                     let mut state = match first {
                         '.' => State::Dot,
                         '0' => State::Zero,
                         _ => State::DecInt(first.into()),
                     };
                     loop {
-                        state = match (state, iter.peek()) {
-                            (State::Dot, Some(&(_, c @ '0'..='9'))) => {
-                                State::Decimal(format!(".{c}"))
+                        fn append_char(mut s: String, c: char) -> String {
+                            s.push(c);
+                            s
+                        }
+                        let c = match iter.peek() {
+                            Some(&(_, c)) => c,
+                            None => break,
+                        };
+                        state = match (state, c) {
+                            (State::Dot, '0'..='9') => State::Decimal(format!(".{c}")),
+                            (State::Zero, '_') => State::DecInt("0".to_string()),
+                            (State::Zero, 'b') => State::BinInt(String::new()),
+                            (State::Zero, 'o') => State::OctInt(String::new()),
+                            (State::Zero, 'x') => State::HexInt(String::new()),
+                            (State::Zero, '.') => State::Decimal("0.".to_string()),
+                            (State::Zero, '0'..='9') => State::Decimal(c.to_string()),
+                            (State::DecInt(s), '.') => State::Decimal(append_char(s, '.')),
+                            (State::Decimal(s), '0'..='9') => State::Decimal(append_char(s, c)),
+                            (State::BinInt(s), '0'..='9') => State::BinInt(append_char(s, c)),
+                            (State::OctInt(s), '0'..='9') => State::OctInt(append_char(s, c)),
+                            (State::DecInt(s), '0'..='9') => State::DecInt(append_char(s, c)),
+                            (State::HexInt(s), '0'..='9' | 'a'..='f' | 'A'..='F') => {
+                                State::HexInt(append_char(s, c))
                             }
-                            (State::Zero, Some(&(_, c @ '0'..='9'))) => {
-                                State::DecInt(c.to_string())
+                            (State::Zero, 'e' | 'E') => State::SciE(format!("0{c}")),
+                            (State::DecInt(s) | State::Decimal(s), 'e' | 'E') => {
+                                State::SciE(append_char(s, c))
                             }
-                            (State::Zero, Some(&(_, 'b'))) => State::BinIntIncomplete,
-                            (State::Zero, Some(&(_, 'o'))) => State::OctIntIncomplete,
-                            (State::Zero, Some(&(_, 'x'))) => State::HexIntIncomplete,
-                            (State::Zero, Some(&(_, '.'))) => State::Decimal(".".to_string()),
-                            (State::BinIntIncomplete, Some(&(_, c @ '0'..='9'))) => {
-                                State::BinInt(c.to_string())
-                            }
-                            (State::OctIntIncomplete, Some(&(_, c @ '0'..='9'))) => {
-                                State::OctInt(c.to_string())
-                            }
-                            (
-                                State::HexIntIncomplete,
-                                Some(&(_, c @ ('0'..='9' | 'a'..='f' | 'A'..='F'))),
-                            ) => State::HexInt(c.to_string()),
-                            (State::BinInt(mut s), Some(&(_, c @ '0'..='9'))) => {
-                                s.push(c);
-                                State::BinInt(s)
-                            }
-                            (State::OctInt(mut s), Some(&(_, c @ '0'..='9'))) => {
-                                s.push(c);
-                                State::OctInt(s)
-                            }
-                            (State::DecInt(mut s), Some(&(_, c @ '0'..='9'))) => {
-                                s.push(c);
-                                State::DecInt(s)
-                            }
-                            (State::DecInt(mut s), Some(&(_, '.'))) => {
-                                s.push('.');
-                                State::Decimal(s)
+                            (State::SciE(s), '+' | '-') => State::SciSign(append_char(s, c)),
+                            (State::SciE(s) | State::SciSign(s) | State::Sci(s), '0'..='9') => {
+                                State::Sci(append_char(s, c))
                             }
                             (
-                                State::HexInt(mut s),
-                                Some(&(_, c @ ('0'..='9' | 'a'..='f' | 'A'..='F'))),
-                            ) => {
-                                s.push(c);
-                                State::HexInt(s)
-                            }
-                            (State::Decimal(mut s), Some(&(_, c @ ('0'..='9')))) => {
-                                s.push(c);
-                                State::Decimal(s)
-                            }
-                            (State::Zero, Some(&(_, c @ ('e' | 'E')))) => {
-                                State::ScientificIncomplete(format!("0{c}"))
-                            }
-                            (
-                                State::DecInt(mut s) | State::Decimal(mut s),
-                                Some(&(_, c @ ('e' | 'E'))),
-                            ) => {
-                                s.push(c);
-                                State::ScientificIncomplete(s)
-                            }
-                            (State::ScientificIncomplete(mut s), Some(&(_, c @ ('+' | '-')))) => {
-                                s.push(c);
-                                State::ScientificIncompleteSign(s)
-                            }
-                            (
-                                State::Scientific(mut s)
-                                | State::ScientificIncomplete(mut s)
-                                | State::ScientificIncompleteSign(mut s),
-                                Some(&(_, c @ ('0'..='9'))),
-                            ) => {
-                                s.push(c);
-                                State::Scientific(s)
-                            }
-                            (State::Zero, Some(&(_, '_'))) => State::DecInt("0".to_string()),
-                            (
-                                prev @ (State::BinInt(_)
+                                s @ (State::DecInt(_)
+                                | State::BinInt(_)
                                 | State::OctInt(_)
-                                | State::DecInt(_)
                                 | State::HexInt(_)
-                                | State::Decimal(_)
-                                | State::Scientific(_)
-                                | State::ScientificIncomplete(_)
-                                | State::ScientificIncompleteSign(_)),
-                                Some(&(_, '_')),
-                            ) => prev,
-                            (State::Zero, Some(&(_, c @ ('a'..='z' | 'A'..='Z')))) => {
-                                State::DecIntSuffix("0".to_string(), c.to_string())
-                            }
-                            (State::BinInt(s), Some(&(_, c @ ('a'..='z' | 'A'..='Z')))) => {
-                                State::BinIntSuffix(s, c.to_string())
-                            }
-                            (State::OctInt(s), Some(&(_, c @ ('a'..='z' | 'A'..='Z')))) => {
-                                State::OctIntSuffix(s, c.to_string())
-                            }
-                            (State::DecInt(s), Some(&(_, c @ ('a'..='z' | 'A'..='Z')))) => {
-                                State::DecIntSuffix(s, c.to_string())
-                            }
-                            (State::HexInt(s), Some(&(_, c @ ('g'..='z' | 'G'..='Z')))) => {
-                                State::HexIntSuffix(s, c.to_string())
-                            }
-                            (
-                                State::Decimal(s) | State::Scientific(s),
-                                Some(&(_, c @ ('a'..='z' | 'A'..='Z'))),
-                            ) => State::FloatSuffix(s, c.to_string()),
-                            (
-                                State::BinIntSuffix(s, mut suffix),
-                                Some(&(_, c @ ('a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$'))),
-                            ) => {
-                                suffix.push(c);
-                                State::BinIntSuffix(s, suffix)
-                            }
-                            (
-                                State::OctIntSuffix(s, mut suffix),
-                                Some(&(_, c @ ('a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$'))),
-                            ) => {
-                                suffix.push(c);
-                                State::OctIntSuffix(s, suffix)
-                            }
-                            (
-                                State::DecIntSuffix(s, mut suffix),
-                                Some(&(_, c @ ('a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$'))),
-                            ) => {
-                                suffix.push(c);
-                                State::DecIntSuffix(s, suffix)
-                            }
-                            (
-                                State::HexIntSuffix(s, mut suffix),
-                                Some(&(_, c @ ('a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$'))),
-                            ) => {
-                                suffix.push(c);
-                                State::HexIntSuffix(s, suffix)
-                            }
-                            (
-                                State::FloatSuffix(s, mut suffix),
-                                Some(&(_, c @ ('a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$'))),
-                            ) => {
-                                suffix.push(c);
-                                State::FloatSuffix(s, suffix)
-                            }
-                            (state, end) => {
-                                let end = end.map(|&(i, _)| i);
-                                let range = pos::Range::from_line_byte(line_num, start, end);
-                                let token = match state {
-                                    State::Zero => token::Token::DecInt("0".to_string()),
-                                    State::BinInt(s) => token::Token::BinInt(s),
-                                    State::BinIntSuffix(s, suffix) => {
-                                        token::Token::BinIntSuffix(s, suffix)
-                                    }
-                                    State::DecInt(s) => token::Token::DecInt(s),
-                                    State::DecIntSuffix(s, suffix) => {
-                                        token::Token::DecIntSuffix(s, suffix)
-                                    }
-                                    State::OctInt(s) => token::Token::OctInt(s),
-                                    State::OctIntSuffix(s, suffix) => {
-                                        token::Token::OctIntSuffix(s, suffix)
-                                    }
-                                    State::HexInt(s) => token::Token::HexInt(s),
-                                    State::HexIntSuffix(s, suffix) => {
-                                        token::Token::HexIntSuffix(s, suffix)
-                                    }
-                                    State::Decimal(s) => token::Token::Float(s),
-                                    State::Dot => token::Token::Dot,
-                                    State::Scientific(s) => token::Token::Float(s),
-                                    State::FloatSuffix(s, suffix) => {
-                                        token::Token::FloatSuffix(s, suffix)
-                                    }
-                                    _ => return Err(Error::InvalidNumericLiteral(range)),
-                                };
-                                tokens.push_back((range, token));
-                                break;
-                            }
+                                | State::Decimal(_)),
+                                '_',
+                            ) => s,
+                            (s, _) => break state = s,
                         };
                         iter.next();
                     }
+                    match state {
+                        State::Dot => token::Token::Dot,
+                        State::Zero => token::Token::DecInt("0".to_string()),
+                        State::DecInt(s) => token::Token::DecInt(s),
+                        State::BinInt(s) => token::Token::BinInt(s),
+                        State::OctInt(s) => token::Token::OctInt(s),
+                        State::HexInt(s) => token::Token::HexInt(s),
+                        State::Decimal(s) | State::Sci(s) => token::Token::Float(s),
+                        _ => return Err(Error::InvalidNumericLiteral(range_gen(iter.peek()))),
+                    }
                 }
                 '+' => {
-                    let range =
-                        pos::Range::from_line_byte(line_num, start, iter.peek().map(|&(i, _)| i));
-                    tokens.push_back((range, token::Token::Plus));
+                    if iter.next_if(|&(_, c)| c == '+').is_some() {
+                        token::Token::DoublePlus
+                    } else if iter.next_if(|&(_, c)| c == '=').is_some() {
+                        token::Token::PlusEqual
+                    } else {
+                        token::Token::Plus
+                    }
                 }
                 '-' => {
-                    let range =
-                        pos::Range::from_line_byte(line_num, start, iter.peek().map(|&(i, _)| i));
-                    tokens.push_back((range, token::Token::Hyphen));
+                    if iter.next_if(|&(_, c)| c == '-').is_some() {
+                        token::Token::DoubleHyphen
+                    } else if iter.next_if(|&(_, c)| c == '=').is_some() {
+                        token::Token::HyphenEqual
+                    } else {
+                        token::Token::Hyphen
+                    }
                 }
                 _ => return Err(Error::UnexpectedCharacter(pos::Start::new(line_num, start))),
-            }
+            };
+            tokens.push_back((range_gen(iter.peek()), token));
         }
     }
 }
