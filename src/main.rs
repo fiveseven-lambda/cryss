@@ -4,19 +4,16 @@ mod pos;
 mod token;
 
 fn main() {
-    let mut lexer = lexer::Lexer::new(Box::new(std::io::BufReader::new(std::io::stdin())), true);
-    let mut log = Vec::new();
+    let mut lexer = lexer::Lexer::new(Box::new(std::io::BufReader::new(std::io::stdin())));
     loop {
-        match lexer.next(&mut log) {
-            Ok(Some((pos, token))) => {
-                println!("{:?} ({:?})", token, pos);
+        match lexer.next() {
+            Ok(Some((range, token))) => {
+                println!("{}({:?}) {:?}", range, range, token);
             }
-            Ok(None) => {
-                break;
-            }
+            Ok(None) => break,
             Err(error) => {
-                error.eprint(&log);
-                break;
+                error.eprint(lexer.log());
+                return;
             }
         }
     }
