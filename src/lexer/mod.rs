@@ -38,7 +38,7 @@ impl Lexer {
             self.log.push(line);
             result.map(|()| true)
         } else {
-            Ok(false)
+            self.line_lexer.deal_with_eof().map(|()| false)
         }
     }
     pub fn next(&mut self) -> Result<Option<token::RToken>, Error> {
