@@ -21,6 +21,8 @@ impl LineLexer {
             Err(Error::UnterminatedComment(std::mem::take(
                 &mut self.comment,
             )))
+        } else if let Some((start, _)) = self.string.take() {
+            Err(Error::UnterminatedStringLiteral(start))
         } else {
             Ok(())
         }
@@ -53,7 +55,7 @@ impl LineLexer {
                     let start = pos::Start::new(line_num, index);
                     self.string = Some((start, String::new()))
                 }
-            } else if let Some((_, string)) = &mut self.string {
+            } else if let Some((start, string)) = &mut self.string {
                 string.push(match ch {
                     '\\' => match iter.next() {
                         Some((_, ch2)) => match ch2 {
@@ -67,9 +69,9 @@ impl LineLexer {
                             c => c,
                         },
                         None => {
-                            return Err(Error::UnterminatedStringLiteral(pos::Start::new(
-                                line_num, index,
-                            )))
+                            // 文字列リテラルの開始場所を得る
+                            let start = std::mem::replace(start, pos::Start::new(0, 0));
+                            return Err(Error::UnterminatedStringLiteral(start));
                         }
                     },
                     c => c,
