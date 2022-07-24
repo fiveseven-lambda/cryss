@@ -4,6 +4,7 @@ pub enum Error {
     UnexpectedCharacter(pos::Start),
     InvalidNumericLiteral(pos::Range),
     UnterminatedComment(Vec<pos::Start>),
+    UnterminatedStringLiteral(pos::Start),
 }
 
 impl Error {
@@ -24,6 +25,10 @@ impl Error {
                     eprintln!("started at {}", pos);
                     pos.eprint(log);
                 }
+            }
+            Error::UnterminatedStringLiteral(pos) => {
+                eprintln!("unterminated string literal started at {}", pos);
+                pos.eprint(log);
             }
         }
     }

@@ -13,11 +13,20 @@ pub struct Range {
 }
 
 impl Start {
-    pub fn new(line: usize, column: usize) -> Start {
-        Start { line, column }
+    pub fn new(line: usize, column: usize) -> Self {
+        Self { line, column }
+    }
+}
+impl End {
+    pub fn new(line: usize, column: Option<usize>) -> Self {
+        Self { line, column }
     }
 }
 impl Range {
+    pub fn new(start: Start, end: End) -> Self {
+        Self { start, end }
+    }
+
     pub fn from_line_byte(line: usize, start: usize, end: Option<usize>) -> Range {
         Range {
             start: Start {

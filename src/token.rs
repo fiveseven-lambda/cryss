@@ -6,6 +6,7 @@ pub enum Token {
     DecInt(String),
     HexInt(String),
     Float(String),
+    String(String),
     Plus,
     DoublePlus,
     PlusEqual,
