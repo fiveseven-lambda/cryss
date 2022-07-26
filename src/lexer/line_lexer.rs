@@ -106,14 +106,10 @@ impl LineLexer {
                             '0' => State::Zero,
                             _ => State::DecInt(ch.into()),
                         };
-                        loop {
-                            fn append_char(mut s: String, ch: char) -> String {
+                        while let Some(&(_, ch)) = iter.peek() {
+                            let append_ch = |mut s: String| {
                                 s.push(ch);
                                 s
-                            }
-                            let ch = match iter.peek() {
-                                Some(&(_, ch)) => ch,
-                                None => break,
                             };
                             state = match (state, ch) {
                                 (State::Dot, '0'..='9') => State::Decimal(format!(".{ch}")),
@@ -123,23 +119,21 @@ impl LineLexer {
                                 (State::Zero, 'x') => State::HexInt(String::new()),
                                 (State::Zero, '.') => State::Decimal("0.".to_string()),
                                 (State::Zero, '0'..='9') => State::Decimal(ch.to_string()),
-                                (State::DecInt(s), '.') => State::Decimal(append_char(s, '.')),
-                                (State::Decimal(s), '0'..='9') => {
-                                    State::Decimal(append_char(s, ch))
-                                }
-                                (State::BinInt(s), '0'..='9') => State::BinInt(append_char(s, ch)),
-                                (State::OctInt(s), '0'..='9') => State::OctInt(append_char(s, ch)),
-                                (State::DecInt(s), '0'..='9') => State::DecInt(append_char(s, ch)),
+                                (State::DecInt(s), '.') => State::Decimal(append_ch(s)),
+                                (State::Decimal(s), '0'..='9') => State::Decimal(append_ch(s)),
+                                (State::BinInt(s), '0'..='9') => State::BinInt(append_ch(s)),
+                                (State::OctInt(s), '0'..='9') => State::OctInt(append_ch(s)),
+                                (State::DecInt(s), '0'..='9') => State::DecInt(append_ch(s)),
                                 (State::HexInt(s), '0'..='9' | 'a'..='f' | 'A'..='F') => {
-                                    State::HexInt(append_char(s, ch))
+                                    State::HexInt(append_ch(s))
                                 }
                                 (State::Zero, 'e' | 'E') => State::SciE(format!("0{ch}")),
                                 (State::DecInt(s) | State::Decimal(s), 'e' | 'E') => {
-                                    State::SciE(append_char(s, ch))
+                                    State::SciE(append_ch(s))
                                 }
-                                (State::SciE(s), '+' | '-') => State::SciSign(append_char(s, ch)),
+                                (State::SciE(s), '+' | '-') => State::SciSign(append_ch(s)),
                                 (State::SciE(s) | State::SciSign(s) | State::Sci(s), '0'..='9') => {
-                                    State::Sci(append_char(s, ch))
+                                    State::Sci(append_ch(s))
                                 }
                                 (
                                     s @ (State::DecInt(_)
@@ -149,7 +143,10 @@ impl LineLexer {
                                     | State::Decimal(_)),
                                     '_',
                                 ) => s,
-                                (s, _) => break state = s,
+                                (state_, _) => {
+                                    state = state_;
+                                    break;
+                                }
                             };
                             iter.next();
                         }
