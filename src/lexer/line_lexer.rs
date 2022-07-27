@@ -1,6 +1,6 @@
 use crate::error::Error;
 use crate::pos;
-use crate::token::{RToken, Token};
+use crate::token::{PToken, Token};
 use std::collections::VecDeque;
 use std::mem;
 
@@ -31,7 +31,7 @@ impl LineLexer {
         &mut self,
         line_num: usize,
         line: &str,
-        tokens: &mut VecDeque<RToken>,
+        tokens: &mut VecDeque<PToken>,
     ) -> Result<(), Error> {
         let mut iter = line.char_indices().peekable();
         while let Some((index, ch)) = iter.next() {
@@ -282,6 +282,7 @@ impl LineLexer {
                     ',' => Token::Comma,
                     '?' => Token::Question,
                     '#' => Token::Hash,
+                    '~' => Token::Tilde,
                     '(' => Token::OpeningParenthesis,
                     ')' => Token::ClosingParenthesis,
                     '[' => Token::OpeningBracket,

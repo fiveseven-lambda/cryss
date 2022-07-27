@@ -124,3 +124,39 @@ impl Range {
         }
     }
 }
+
+impl std::ops::Add<Range> for Range {
+    type Output = Range;
+    fn add(self, rhs: Range) -> Range {
+        Range::new(self.start, rhs.end)
+    }
+}
+impl std::ops::Add<&Range> for Range {
+    type Output = Range;
+    fn add(self, rhs: &Range) -> Range {
+        Range::new(self.start, rhs.end.clone())
+    }
+}
+impl std::ops::Add<Range> for &Range {
+    type Output = Range;
+    fn add(self, rhs: Range) -> Range {
+        Range::new(self.start.clone(), rhs.end)
+    }
+}
+impl std::ops::Add<&Range> for &Range {
+    type Output = Range;
+    fn add(self, rhs: &Range) -> Range {
+        Range::new(self.start.clone(), rhs.end.clone())
+    }
+}
+// impl std::ops::AddAssign<Range> for Range {
+//     fn add_assign(&mut self, rhs: Range) {
+//         self.end = rhs.end;
+//     }
+// }
+// impl std::ops::AddAssign<&Range> for Range {
+//     fn add_assign(&mut self, rhs: &Range) {
+//         self.end = rhs.end.clone();
+//     }
+// }
+//

@@ -7,11 +7,12 @@ use std::collections::VecDeque;
 use std::io::BufRead;
 
 use crate::error::Error;
-use crate::token::RToken;
+use crate::pos;
+use crate::token::{PToken, Token};
 
 pub struct Lexer {
     reader: Box<dyn BufRead>,
-    tokens: VecDeque<RToken>,
+    tokens: VecDeque<PToken>,
     line_lexer: LineLexer,
     log: Vec<String>,
     prompt: bool,
@@ -53,16 +54,41 @@ impl Lexer {
         }
         Ok(not_eof)
     }
-    pub fn next(&mut self) -> Result<Option<RToken>, Error> {
+    pub fn next(&mut self) -> Result<Option<PToken>, Error> {
         loop {
-            match self.tokens.pop_front() {
-                Some(token) => return Ok(Some(token)),
-                None => {
-                    if !self.read()? {
-                        return Ok(None);
-                    }
-                }
+            if let Some(token) = self.tokens.pop_front() {
+                return Ok(Some(token));
+            } else if !self.read()? {
+                return Ok(None);
             }
+        }
+    }
+    pub fn next_if(&mut self, cond: impl FnOnce(&Token) -> bool) -> Result<Option<PToken>, Error> {
+        loop {
+            if let Some((_, token)) = self.tokens.front() {
+                if cond(token) {
+                    return Ok(self.tokens.pop_front());
+                }
+            } else if self.read()? {
+                continue;
+            }
+            return Ok(None);
+        }
+    }
+    pub fn next_if_map<B>(
+        &mut self,
+        f: impl FnOnce(&Token) -> Option<B>,
+    ) -> Result<Option<(pos::Range, B)>, Error> {
+        loop {
+            if let Some((_, token)) = self.tokens.front() {
+                if let Some(result) = f(token) {
+                    let (pos, _) = unsafe { self.tokens.pop_front().unwrap_unchecked() };
+                    return Ok(Some((pos, result)));
+                }
+            } else if self.read()? {
+                continue;
+            }
+            return Ok(None);
         }
     }
 }

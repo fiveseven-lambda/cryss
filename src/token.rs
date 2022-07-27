@@ -49,6 +49,7 @@ pub enum Token {
     Comma,
     Question,
     Hash,
+    Tilde,
     OpeningParenthesis,
     ClosingParenthesis,
     OpeningBracket,
@@ -57,4 +58,4 @@ pub enum Token {
     ClosingBrace,
 }
 
-pub type RToken = (crate::pos::Range, Token);
+pub type PToken = (crate::pos::Range, Token);
