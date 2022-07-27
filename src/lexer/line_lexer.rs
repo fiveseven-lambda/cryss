@@ -1,7 +1,8 @@
 use crate::error::Error;
 use crate::pos;
-use crate::token;
+use crate::token::{RToken, Token};
 use std::collections::VecDeque;
+use std::mem;
 
 pub struct LineLexer {
     comment: Vec<pos::Start>,
@@ -18,9 +19,7 @@ impl LineLexer {
 
     pub fn deal_with_eof(&mut self) -> Result<(), Error> {
         if !self.comment.is_empty() {
-            Err(Error::UnterminatedComment(std::mem::take(
-                &mut self.comment,
-            )))
+            Err(Error::UnterminatedComment(mem::take(&mut self.comment)))
         } else if let Some((start, _)) = self.string.take() {
             Err(Error::UnterminatedStringLiteral(start))
         } else {
@@ -32,13 +31,13 @@ impl LineLexer {
         &mut self,
         line_num: usize,
         line: &str,
-        tokens: &mut VecDeque<token::RToken>,
+        tokens: &mut VecDeque<RToken>,
     ) -> Result<(), Error> {
         let mut iter = line.char_indices().peekable();
         while let Some((index, ch)) = iter.next() {
-            let second_is = |ch1| move |&(_, ch2): &(usize, char)| ch1 == ch2;
-            let range_gen = |peeked: Option<&(usize, char)>| {
-                pos::Range::from_line_byte(line_num, index, peeked.map(|&(i, _)| i))
+            let second_is = |ch1| move |&(_, ch2): &_| ch1 == ch2;
+            let range_gen = |peeked: Option<_>| {
+                pos::Range::new_single_line(line_num, index, peeked.map(|&(i, _)| i))
             };
             if !self.comment.is_empty() {
                 if ch == '*' && iter.next_if(second_is('/')).is_some() {
@@ -50,7 +49,7 @@ impl LineLexer {
                 if let Some((start, string)) = self.string.take() {
                     let end = pos::End::new(line_num, iter.peek().map(|&(i, _)| i));
                     let range = pos::Range::new(start, end);
-                    tokens.push_back((range, token::Token::String(string)));
+                    tokens.push_back((range, Token::String(string)));
                 } else {
                     let start = pos::Start::new(line_num, index);
                     self.string = Some((start, String::new()))
@@ -66,15 +65,11 @@ impl LineLexer {
                             '0' => '\0',
                             // バックスラッシュの直後の文字を push
                             // `"` や `'` のエスケープを含む
-                            c => c,
+                            _ => ch2,
                         },
-                        None => {
-                            // 文字列リテラルの開始場所を得る
-                            let start = std::mem::replace(start, pos::Start::new(0, 0));
-                            return Err(Error::UnterminatedStringLiteral(start));
-                        }
+                        None => return Err(Error::UnterminatedStringLiteral(start.clone())),
                     },
-                    c => c,
+                    _ => ch,
                 });
             } else if !ch.is_ascii_whitespace() {
                 let token = match ch {
@@ -86,7 +81,7 @@ impl LineLexer {
                             s.push(ch);
                             iter.next();
                         }
-                        token::Token::Identifier(s)
+                        Token::Identifier(s)
                     }
                     '0'..='9' | '.' => {
                         enum State {
@@ -151,39 +146,39 @@ impl LineLexer {
                             iter.next();
                         }
                         match state {
-                            State::Dot => token::Token::Dot,
-                            State::Zero => token::Token::DecInt("0".to_string()),
-                            State::DecInt(s) => token::Token::DecInt(s),
-                            State::BinInt(s) => token::Token::BinInt(s),
-                            State::OctInt(s) => token::Token::OctInt(s),
-                            State::HexInt(s) => token::Token::HexInt(s),
-                            State::Decimal(s) | State::Sci(s) => token::Token::Float(s),
+                            State::Dot => Token::Dot,
+                            State::Zero => Token::DecInt("0".to_string()),
+                            State::DecInt(s) => Token::DecInt(s),
+                            State::BinInt(s) => Token::BinInt(s),
+                            State::OctInt(s) => Token::OctInt(s),
+                            State::HexInt(s) => Token::HexInt(s),
+                            State::Decimal(s) | State::Sci(s) => Token::Float(s),
                             _ => return Err(Error::InvalidNumericLiteral(range_gen(iter.peek()))),
                         }
                     }
                     '+' => {
                         if iter.next_if(second_is('+')).is_some() {
-                            token::Token::DoublePlus
+                            Token::DoublePlus
                         } else if iter.next_if(second_is('=')).is_some() {
-                            token::Token::PlusEqual
+                            Token::PlusEqual
                         } else {
-                            token::Token::Plus
+                            Token::Plus
                         }
                     }
                     '-' => {
                         if iter.next_if(second_is('-')).is_some() {
-                            token::Token::DoubleHyphen
+                            Token::DoubleHyphen
                         } else if iter.next_if(second_is('=')).is_some() {
-                            token::Token::HyphenEqual
+                            Token::HyphenEqual
                         } else {
-                            token::Token::Hyphen
+                            Token::Hyphen
                         }
                     }
                     '*' => {
                         if iter.next_if(second_is('=')).is_some() {
-                            token::Token::AsteriskEqual
+                            Token::AsteriskEqual
                         } else {
-                            token::Token::Asterisk
+                            Token::Asterisk
                         }
                     }
                     '/' => {
@@ -193,105 +188,106 @@ impl LineLexer {
                             self.comment.push(pos::Start::new(line_num, index));
                             continue;
                         } else if iter.next_if(second_is('=')).is_some() {
-                            token::Token::SlashEqual
+                            Token::SlashEqual
                         } else {
-                            token::Token::Slash
+                            Token::Slash
                         }
                     }
                     '%' => {
                         if iter.next_if(second_is('=')).is_some() {
-                            token::Token::PercentEqual
+                            Token::PercentEqual
                         } else {
-                            token::Token::Percent
+                            Token::Percent
                         }
                     }
                     '=' => {
                         if iter.next_if(second_is('=')).is_some() {
-                            token::Token::DoubleEqual
+                            Token::DoubleEqual
                         } else {
-                            token::Token::Equal
+                            Token::Equal
                         }
                     }
                     '!' => {
                         if iter.next_if(second_is('=')).is_some() {
-                            token::Token::ExclamationEqual
+                            Token::ExclamationEqual
                         } else {
-                            token::Token::Exclamation
+                            Token::Exclamation
                         }
                     }
                     '<' => {
                         if iter.next_if(second_is('<')).is_some() {
                             if iter.next_if(second_is('<')).is_some() {
                                 if iter.next_if(second_is('=')).is_some() {
-                                    token::Token::TripleLessEqual
+                                    Token::TripleLessEqual
                                 } else {
-                                    token::Token::TripleLess
+                                    Token::TripleLess
                                 }
                             } else if iter.next_if(second_is('=')).is_some() {
-                                token::Token::DoubleLessEqual
+                                Token::DoubleLessEqual
                             } else {
-                                token::Token::DoubleLess
+                                Token::DoubleLess
                             }
                         } else if iter.next_if(second_is('=')).is_some() {
-                            token::Token::LessEqual
+                            Token::LessEqual
                         } else {
-                            token::Token::Less
+                            Token::Less
                         }
                     }
                     '>' => {
                         if iter.next_if(second_is('>')).is_some() {
                             if iter.next_if(second_is('>')).is_some() {
                                 if iter.next_if(second_is('=')).is_some() {
-                                    token::Token::TripleGreaterEqual
+                                    Token::TripleGreaterEqual
                                 } else {
-                                    token::Token::TripleGreater
+                                    Token::TripleGreater
                                 }
                             } else if iter.next_if(second_is('=')).is_some() {
-                                token::Token::DoubleGreaterEqual
+                                Token::DoubleGreaterEqual
                             } else {
-                                token::Token::DoubleGreater
+                                Token::DoubleGreater
                             }
                         } else if iter.next_if(second_is('=')).is_some() {
-                            token::Token::GreaterEqual
+                            Token::GreaterEqual
                         } else {
-                            token::Token::Greater
+                            Token::Greater
                         }
                     }
                     '&' => {
                         if iter.next_if(second_is('&')).is_some() {
-                            token::Token::DoubleAmpersand
+                            Token::DoubleAmpersand
                         } else if iter.next_if(second_is('=')).is_some() {
-                            token::Token::AmpersandEqual
+                            Token::AmpersandEqual
                         } else {
-                            token::Token::Ampersand
+                            Token::Ampersand
                         }
                     }
                     '|' => {
                         if iter.next_if(second_is('|')).is_some() {
-                            token::Token::DoubleBar
+                            Token::DoubleBar
                         } else if iter.next_if(second_is('=')).is_some() {
-                            token::Token::BarEqual
+                            Token::BarEqual
                         } else {
-                            token::Token::Bar
+                            Token::Bar
                         }
                     }
                     '^' => {
                         if iter.next_if(second_is('=')).is_some() {
-                            token::Token::CircumflexEqual
+                            Token::CircumflexEqual
                         } else {
-                            token::Token::Circumflex
+                            Token::Circumflex
                         }
                     }
-                    ':' => token::Token::Colon,
-                    ';' => token::Token::Semicolon,
-                    ',' => token::Token::Comma,
-                    '?' => token::Token::Question,
-                    '(' => token::Token::OpeningParenthesis,
-                    ')' => token::Token::ClosingParenthesis,
-                    '[' => token::Token::OpeningBracket,
-                    ']' => token::Token::ClosingBracket,
-                    '{' => token::Token::OpeningBrace,
-                    '}' => token::Token::ClosingBrace,
+                    ':' => Token::Colon,
+                    ';' => Token::Semicolon,
+                    ',' => Token::Comma,
+                    '?' => Token::Question,
+                    '#' => Token::Hash,
+                    '(' => Token::OpeningParenthesis,
+                    ')' => Token::ClosingParenthesis,
+                    '[' => Token::OpeningBracket,
+                    ']' => Token::ClosingBracket,
+                    '{' => Token::OpeningBrace,
+                    '}' => Token::ClosingBrace,
                     _ => return Err(Error::UnexpectedCharacter(pos::Start::new(line_num, index))),
                 };
                 tokens.push_back((range_gen(iter.peek()), token));

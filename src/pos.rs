@@ -1,12 +1,16 @@
+#[derive(Clone)]
 pub struct Start {
     line: usize,
     column: usize,
 }
+
+#[derive(Clone)]
 pub struct End {
     line: usize,
     column: Option<usize>,
 }
 
+#[derive(Clone)]
 pub struct Range {
     start: Start,
     end: End,
@@ -27,7 +31,7 @@ impl Range {
         Self { start, end }
     }
 
-    pub fn from_line_byte(line: usize, start: usize, end: Option<usize>) -> Range {
+    pub fn new_single_line(line: usize, start: usize, end: Option<usize>) -> Range {
         Range {
             start: Start {
                 line,

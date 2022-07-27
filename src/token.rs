@@ -48,6 +48,7 @@ pub enum Token {
     Semicolon,
     Comma,
     Question,
+    Hash,
     OpeningParenthesis,
     ClosingParenthesis,
     OpeningBracket,
