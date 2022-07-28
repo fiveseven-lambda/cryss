@@ -14,6 +14,7 @@ pub struct Lexer {
     reader: Box<dyn BufRead>,
     tokens: VecDeque<PToken>,
     line_lexer: LineLexer,
+    eof: bool,
     log: Vec<String>,
     prompt: bool,
 }
@@ -25,13 +26,16 @@ impl Lexer {
             prompt,
             tokens: VecDeque::new(),
             line_lexer: LineLexer::new(),
+            eof: false,
             log: Vec::new(),
         }
     }
     pub fn log(&self) -> &[String] {
         &self.log
     }
-    fn read(&mut self) -> Result<bool, Error> {
+    fn read(&mut self) -> Result<(), Error> {
+        assert!(self.tokens.is_empty());
+
         let mut line = String::new();
         if self.prompt {
             // 対話環境ではプロンプトを出す
@@ -40,39 +44,41 @@ impl Lexer {
             print!("> ");
             std::io::stdout().flush().expect("failed to flush stdout");
         }
-        let not_eof = self
+        self.eof = self
             .reader
             .read_line(&mut line)
             .expect("failed to read input")
-            > 0;
-        if not_eof {
+            == 0;
+        if self.eof {
+            self.line_lexer.deal_with_eof()
+        } else {
             let result = self.line_lexer.run(self.log.len(), &line, &mut self.tokens);
             self.log.push(line);
-            result?;
-        } else {
-            self.line_lexer.deal_with_eof()?;
+            result
         }
-        Ok(not_eof)
     }
     pub fn next(&mut self) -> Result<Option<PToken>, Error> {
         loop {
-            if let Some(token) = self.tokens.pop_front() {
-                return Ok(Some(token));
-            } else if !self.read()? {
+            if self.eof {
                 return Ok(None);
+            } else if let Some(next) = self.tokens.pop_front() {
+                return Ok(Some(next));
             }
+            self.read()?;
         }
     }
     pub fn next_if(&mut self, cond: impl FnOnce(&Token) -> bool) -> Result<Option<PToken>, Error> {
         loop {
-            if let Some((_, token)) = self.tokens.front() {
+            if self.eof {
+                return Ok(None);
+            } else if let Some((_, token)) = self.tokens.front() {
                 if cond(token) {
                     return Ok(self.tokens.pop_front());
+                } else {
+                    return Ok(None);
                 }
-            } else if self.read()? {
-                continue;
             }
-            return Ok(None);
+            self.read()?;
         }
     }
     pub fn next_if_map<B>(
@@ -80,15 +86,17 @@ impl Lexer {
         f: impl FnOnce(&Token) -> Option<B>,
     ) -> Result<Option<(pos::Range, B)>, Error> {
         loop {
-            if let Some((_, token)) = self.tokens.front() {
-                if let Some(result) = f(token) {
-                    let (pos, _) = unsafe { self.tokens.pop_front().unwrap_unchecked() };
-                    return Ok(Some((pos, result)));
+            if self.eof {
+                return Ok(None);
+            } else if let Some(next) = self.tokens.pop_front() {
+                if let Some(result) = f(&next.1) {
+                    return Ok(Some((next.0, result)));
+                } else {
+                    self.tokens.push_front(next);
+                    return Ok(None);
                 }
-            } else if self.read()? {
-                continue;
             }
-            return Ok(None);
+            self.read()?;
         }
     }
 }

@@ -12,10 +12,7 @@ pub enum PreSentence {
 impl From<PreSentence> for Sentence {
     fn from(pre_sentence: PreSentence) -> Sentence {
         match pre_sentence {
-            PreSentence::Expr(expr) => Sentence::Expr(expr.map(|expr| {
-                let expr = (expr.0, expr.1.into());
-                expr.into()
-            })),
+            PreSentence::Expr(expr) => Sentence::Expr(expr.map(|(pos, expr)| (pos, expr.into()))),
         }
     }
 }

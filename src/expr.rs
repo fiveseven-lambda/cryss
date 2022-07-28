@@ -77,7 +77,7 @@ impl From<PreExpr> for Expr {
             PreExpr::Identifier(s) => Expr::Identifier(s),
             PreExpr::BinInt(s) => Expr::Integer(i32::from_str_radix(&s, 2).unwrap()),
             PreExpr::OctInt(s) => Expr::Integer(i32::from_str_radix(&s, 8).unwrap()),
-            PreExpr::DecInt(s) => Expr::Integer(i32::from_str_radix(&s, 10).unwrap()),
+            PreExpr::DecInt(s) => Expr::Integer(s.parse().unwrap()),
             PreExpr::HexInt(s) => Expr::Integer(i32::from_str_radix(&s, 16).unwrap()),
             PreExpr::Float(s) => Expr::Float(s.parse().unwrap()),
             PreExpr::String(s) => Expr::String(s),
@@ -90,13 +90,13 @@ impl From<PreExpr> for Expr {
                         PreExpr::OctInt(s) => {
                             return Expr::Integer(i32::from_str_radix(&format!("-{s}"), 8).unwrap())
                         }
-                        PreExpr::HexInt(s) => {
-                            return Expr::Integer(
-                                i32::from_str_radix(&format!("-{s}"), 10).unwrap(),
-                            )
-                        }
                         PreExpr::DecInt(s) => {
                             return Expr::Integer(format!("-{s}").parse().unwrap())
+                        }
+                        PreExpr::HexInt(s) => {
+                            return Expr::Integer(
+                                i32::from_str_radix(&format!("-{s}"), 16).unwrap(),
+                            )
                         }
                         _ => {}
                     }
