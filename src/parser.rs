@@ -1,34 +1,42 @@
 use crate::error::Error;
 use crate::expr;
 use crate::lexer::Lexer;
+use crate::sentence;
 use crate::token::Token;
 
+pub fn parse_sentence(lexer: &mut Lexer) -> Result<Option<sentence::PPreSentence>, Error> {
+    match (parse_expr(lexer)?, lexer.next()?) {
+        (expr, Some((pos_semicolon, Token::Semicolon))) => {
+            let pos = match &expr {
+                Some((pos, _)) => pos + pos_semicolon,
+                None => pos_semicolon,
+            };
+            Ok(Some((pos, sentence::PreSentence::Expr(expr))))
+        }
+        (None, None) => Ok(None),
+        _ => panic!(),
+    }
+}
+
+fn parse_expr(lexer: &mut Lexer) -> Result<Option<expr::PPreExpr>, Error> {
+    parse_bin_op(lexer, Precedence::first().unwrap())
+}
+
 fn parse_factor(lexer: &mut Lexer) -> Result<Option<expr::PPreExpr>, Error> {
-    let pos;
-    let expr;
-    if let Some((pos_token, token)) = lexer.next_if(|token| {
-        matches!(
-            token,
-            Token::Identifier(_)
-                | Token::BinInt(_)
-                | Token::DecInt(_)
-                | Token::OctInt(_)
-                | Token::HexInt(_)
-                | Token::Float(_)
-                | Token::String(_)
-        )
-    })? {
-        pos = pos_token;
-        expr = match token {
-            Token::Identifier(s) => expr::PreExpr::Identifier(s),
-            Token::BinInt(s) => expr::PreExpr::BinInt(s),
-            Token::OctInt(s) => expr::PreExpr::OctInt(s),
-            Token::DecInt(s) => expr::PreExpr::DecInt(s),
-            Token::HexInt(s) => expr::PreExpr::HexInt(s),
-            Token::Float(s) => expr::PreExpr::Float(s),
-            Token::String(s) => expr::PreExpr::String(s),
-            _ => unreachable!(),
-        };
+    let mut ret = if let Some((pos, Token::Identifier(s))) = lexer.next_if(Token::is_identifier)? {
+        (pos, expr::PreExpr::Identifier(s))
+    } else if let Some((pos, Token::BinInt(s))) = lexer.next_if(Token::is_bin_int)? {
+        (pos, expr::PreExpr::BinInt(s))
+    } else if let Some((pos, Token::OctInt(s))) = lexer.next_if(Token::is_oct_int)? {
+        (pos, expr::PreExpr::OctInt(s))
+    } else if let Some((pos, Token::DecInt(s))) = lexer.next_if(Token::is_dec_int)? {
+        (pos, expr::PreExpr::DecInt(s))
+    } else if let Some((pos, Token::HexInt(s))) = lexer.next_if(Token::is_hex_int)? {
+        (pos, expr::PreExpr::HexInt(s))
+    } else if let Some((pos, Token::Float(s))) = lexer.next_if(Token::is_float)? {
+        (pos, expr::PreExpr::Float(s))
+    } else if let Some((pos, Token::String(s))) = lexer.next_if(Token::is_string)? {
+        (pos, expr::PreExpr::String(s))
     } else if let Some(op) = lexer.next_if_map(|token| match token {
         Token::Plus => Some(expr::UnOp::Plus),
         Token::Hyphen => Some(expr::UnOp::Minus),
@@ -38,31 +46,26 @@ fn parse_factor(lexer: &mut Lexer) -> Result<Option<expr::PPreExpr>, Error> {
         _ => None,
     })? {
         match parse_factor(lexer)? {
-            Some(operand) => {
-                pos = &op.0 + &operand.0;
-                expr = expr::PreExpr::UnOp(op, operand.into());
-            }
+            Some(operand) => (&op.0 + &operand.0, expr::PreExpr::UnOp(op, operand.into())),
             None => panic!(),
         }
-    } else if let Some((pos_open, _)) =
-        lexer.next_if(|token| matches!(token, Token::OpeningParenthesis))?
-    {
+    } else if let Some((pos_open, _)) = lexer.next_if(Token::is_opening_parenthesis)? {
         let inner = parse_expr(lexer)?;
         let pos_close = match lexer.next()? {
             Some((pos_close, Token::ClosingParenthesis)) => pos_close,
             _ => panic!(),
         };
-        expr = match inner {
+        let expr = match inner {
             Some(inner) => expr::PreExpr::Group(inner.into()),
             None => panic!(),
         };
-        pos = pos_open + pos_close;
+        let pos = pos_open + pos_close;
+        (pos, expr)
     } else {
         return Ok(None);
     };
-    let mut ret = (pos, expr);
     loop {
-        if let Some(..) = lexer.next_if(|token| matches!(token, Token::OpeningParenthesis))? {
+        if let Some(..) = lexer.next_if(Token::is_opening_parenthesis)? {
             let args = parse_list(lexer)?;
             let pos_close = match lexer.next()? {
                 Some((pos_close, Token::ClosingParenthesis)) => pos_close,
@@ -78,7 +81,7 @@ fn parse_factor(lexer: &mut Lexer) -> Result<Option<expr::PPreExpr>, Error> {
 }
 
 use enum_iterator::Sequence;
-#[derive(Clone, Copy, Sequence, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, Sequence, PartialEq, Eq)]
 enum Precedence {
     Assign,
     TimeShift,
@@ -213,15 +216,11 @@ fn parse_bin_op(lexer: &mut Lexer, prec: Precedence) -> Result<Option<expr::PPre
     }
 }
 
-pub fn parse_expr(lexer: &mut Lexer) -> Result<Option<expr::PPreExpr>, Error> {
-    parse_bin_op(lexer, Precedence::first().unwrap())
-}
-
-pub fn parse_list(lexer: &mut Lexer) -> Result<Vec<expr::PPreExpr>, Error> {
+fn parse_list(lexer: &mut Lexer) -> Result<Vec<expr::PPreExpr>, Error> {
     let mut ret = Vec::new();
     loop {
         let elem = parse_expr(lexer)?;
-        if let Some(_) = lexer.next_if(|token| matches!(token, Token::Comma))? {
+        if let Some(_) = lexer.next_if(Token::is_comma)? {
             match elem {
                 Some(elem) => ret.push(elem),
                 None => panic!(),

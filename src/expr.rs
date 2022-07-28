@@ -45,6 +45,18 @@ pub enum BinOp {
 }
 
 #[derive(Debug)]
+pub enum Expr {
+    Identifier(String),
+    Integer(i32),
+    Float(f64),
+    String(String),
+    UnOp(PUnOp, Box<PExpr>),
+    BinOp(PBinOp, Box<PExpr>, Box<PExpr>),
+    Group(Box<PExpr>),
+    Call(Box<PExpr>, Vec<PExpr>),
+}
+
+#[derive(Debug)]
 pub enum PreExpr {
     Identifier(String),
     BinInt(String),
@@ -69,9 +81,9 @@ impl From<PreExpr> for Expr {
             PreExpr::HexInt(s) => Expr::Integer(i32::from_str_radix(&s, 16).unwrap()),
             PreExpr::Float(s) => Expr::Float(s.parse().unwrap()),
             PreExpr::String(s) => Expr::String(s),
-            PreExpr::UnOp((pos_op, op), operand) => {
-                let op_name = match op {
-                    UnOp::Minus => match operand.1 {
+            PreExpr::UnOp(op, operand) => {
+                if matches!(op.1, UnOp::Minus) {
+                    match operand.1 {
                         PreExpr::BinInt(s) => {
                             return Expr::Integer(i32::from_str_radix(&format!("-{s}"), 2).unwrap())
                         }
@@ -86,57 +98,16 @@ impl From<PreExpr> for Expr {
                         PreExpr::DecInt(s) => {
                             return Expr::Integer(format!("-{s}").parse().unwrap())
                         }
-                        _ => "-",
-                    },
-                    UnOp::Plus => "+",
-                    UnOp::Recip => "/",
-                    UnOp::BitNot => "~",
-                    UnOp::LogicalNot => "!",
-                };
-                let op = (pos_op, Expr::Identifier(op_name.to_string()));
+                        _ => {}
+                    }
+                }
                 let operand = (operand.0, operand.1.into());
-                Expr::Call(op.into(), vec![operand])
+                Expr::UnOp(op, operand.into())
             }
-            PreExpr::BinOp((pos_op, op), left, right) => {
-                let op_name = match op {
-                    BinOp::Add => "+",
-                    BinOp::Sub => "-",
-                    BinOp::Mul => "*",
-                    BinOp::Div => "/",
-                    BinOp::Rem => "%",
-                    BinOp::LeftShift => "<<",
-                    BinOp::RightShift => ">>",
-                    BinOp::BackwardShift => "<<<",
-                    BinOp::ForwardShift => ">>>",
-                    BinOp::Equal => "==",
-                    BinOp::NotEqual => "!=",
-                    BinOp::Less => "<",
-                    BinOp::Greater => ">",
-                    BinOp::LessEqual => "<=",
-                    BinOp::GreaterEqual => ">=",
-                    BinOp::LogicalAnd => "&&",
-                    BinOp::LogicalOr => "||",
-                    BinOp::BitAnd => "&",
-                    BinOp::BitOr => "|",
-                    BinOp::BitXor => "^",
-                    BinOp::Assign => "=",
-                    BinOp::AddAssign => "+=",
-                    BinOp::SubAssign => "-=",
-                    BinOp::MulAssign => "*=",
-                    BinOp::DivAssign => "/=",
-                    BinOp::RemAssign => "%=",
-                    BinOp::BitAndAssign => "&=",
-                    BinOp::BitOrAssign => "|=",
-                    BinOp::BitXorAssign => "^=",
-                    BinOp::LeftShiftAssign => "<<=",
-                    BinOp::RightShiftAssign => ">>=",
-                    BinOp::BackwardShiftAssign => "<<<=",
-                    BinOp::ForwardShiftAssign => ">>>=",
-                };
-                let op = (pos_op, Expr::Identifier(op_name.to_string()));
+            PreExpr::BinOp(op, left, right) => {
                 let left = (left.0, left.1.into());
                 let right = (right.0, right.1.into());
-                Expr::Call(op.into(), vec![left, right])
+                Expr::BinOp(op, left.into(), right.into())
             }
             PreExpr::Group(expr) => {
                 let expr = (expr.0, expr.1.into());
@@ -152,16 +123,6 @@ impl From<PreExpr> for Expr {
             }
         }
     }
-}
-
-#[derive(Debug)]
-pub enum Expr {
-    Identifier(String),
-    Integer(i32),
-    Float(f64),
-    String(String),
-    Group(Box<PExpr>),
-    Call(Box<PExpr>, Vec<PExpr>),
 }
 
 use crate::pos;

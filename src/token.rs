@@ -1,4 +1,3 @@
-#[derive(Debug)]
 pub enum Token {
     Identifier(String),
     BinInt(String),
@@ -56,6 +55,36 @@ pub enum Token {
     ClosingBracket,
     OpeningBrace,
     ClosingBrace,
+}
+
+impl Token {
+    pub fn is_identifier(&self) -> bool {
+        matches!(self, Token::Identifier(..))
+    }
+    pub fn is_bin_int(&self) -> bool {
+        matches!(self, Self::BinInt(..))
+    }
+    pub fn is_oct_int(&self) -> bool {
+        matches!(self, Self::OctInt(..))
+    }
+    pub fn is_dec_int(&self) -> bool {
+        matches!(self, Self::DecInt(..))
+    }
+    pub fn is_hex_int(&self) -> bool {
+        matches!(self, Self::HexInt(..))
+    }
+    pub fn is_float(&self) -> bool {
+        matches!(self, Self::Float(..))
+    }
+    pub fn is_string(&self) -> bool {
+        matches!(self, Self::String(..))
+    }
+    pub fn is_opening_parenthesis(&self) -> bool {
+        matches!(self, Self::OpeningParenthesis)
+    }
+    pub fn is_comma(&self) -> bool {
+        matches!(self, Self::Comma)
+    }
 }
 
 pub type PToken = (crate::pos::Range, Token);
