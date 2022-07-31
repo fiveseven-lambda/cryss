@@ -47,17 +47,23 @@ fn parse_factor(lexer: &mut Lexer) -> Result<Option<expr::PPreExpr>, Error> {
     })? {
         match parse_factor(lexer)? {
             Some(operand) => (&op.0 + &operand.0, expr::PreExpr::UnOp(op, operand.into())),
-            None => panic!(),
+            None => {
+                return Err(match lexer.next()? {
+                    Some((pos, _)) => Error::UnexpectedTokenAfterPrefixOperator(op.0, pos),
+                    None => Error::UnexpectedEOFAfterPrefixOperator(op.0),
+                })
+            }
         }
     } else if let Some((pos_open, _)) = lexer.next_if(Token::is_opening_parenthesis)? {
         let inner = parse_expr(lexer)?;
         let pos_close = match lexer.next()? {
             Some((pos_close, Token::ClosingParenthesis)) => pos_close,
-            _ => panic!(),
+            Some((pos, _)) => return Err(Error::UnexpectedTokenInParenthesis(pos_open, pos)),
+            None => return Err(Error::NoClosingParenthesis(pos_open)),
         };
         let expr = match inner {
             Some(inner) => expr::PreExpr::Group(inner.into()),
-            None => panic!(),
+            None => return Err(Error::EmptyParenthesis(pos_open, pos_close)),
         };
         let pos = pos_open + pos_close;
         (pos, expr)
@@ -65,11 +71,12 @@ fn parse_factor(lexer: &mut Lexer) -> Result<Option<expr::PPreExpr>, Error> {
         return Ok(None);
     };
     loop {
-        if let Some(..) = lexer.next_if(Token::is_opening_parenthesis)? {
+        if let Some((pos_open, _)) = lexer.next_if(Token::is_opening_parenthesis)? {
             let args = parse_list(lexer)?;
             let pos_close = match lexer.next()? {
                 Some((pos_close, Token::ClosingParenthesis)) => pos_close,
-                _ => panic!(),
+                Some((pos, _)) => return Err(Error::UnexpectedTokenInParenthesis(pos_open, pos)),
+                None => return Err(Error::NoClosingParenthesis(pos_open)),
             };
             let pos = &ret.0 + pos_close;
             let expr = expr::PreExpr::Call(ret.into(), args);
@@ -203,7 +210,12 @@ fn parse_bin_op(lexer: &mut Lexer, prec: Precedence) -> Result<Option<expr::PPre
                 },
             )? {
                 Some(expr) => expr,
-                None => panic!(),
+                None => {
+                    return Err(match lexer.next()? {
+                        Some((pos, _)) => Error::UnexpectedTokenAfterBinaryOperator(op.0, pos),
+                        None => Error::UnexpectedEOFAfterBinaryOperator(op.0),
+                    })
+                }
             };
             let pos = &ret.0 + &right.0;
             let expr = expr::PreExpr::BinOp(op, ret.into(), right.into());
@@ -220,10 +232,10 @@ fn parse_list(lexer: &mut Lexer) -> Result<Vec<expr::PPreExpr>, Error> {
     let mut ret = Vec::new();
     loop {
         let elem = parse_expr(lexer)?;
-        if let Some(_) = lexer.next_if(Token::is_comma)? {
+        if let Some((pos_comma, _)) = lexer.next_if(Token::is_comma)? {
             match elem {
                 Some(elem) => ret.push(elem),
-                None => panic!(),
+                None => return Err(Error::NoExpressionBeforeComma(pos_comma)),
             }
         } else {
             if let Some(elem) = elem {

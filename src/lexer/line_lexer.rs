@@ -72,16 +72,34 @@ impl LineLexer {
                     _ => ch,
                 });
             } else if !ch.is_ascii_whitespace() {
-                let token = match ch {
+                // rename ch -> first_ch
+                let first_ch = ch;
+                #[allow(unused_variables)]
+                let ch: ();
+                // rename index -> first_index
+                let first_index = index;
+                #[allow(unused_variables)]
+                let index: ();
+                let token = match first_ch {
                     'a'..='z' | 'A'..='Z' | '_' | '$' => {
-                        let mut s = ch.to_string();
-                        while let Some(&(_, ch @ ('a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$'))) =
-                            iter.peek()
-                        {
-                            s.push(ch);
-                            iter.next();
+                        while iter
+                            .next_if(|&(_, ch)| {
+                                matches!(ch,
+                                'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '$'
+                                )
+                            })
+                            .is_some()
+                        {}
+                        let s = match iter.peek() {
+                            Some(&(index, _)) => &line[first_index..index],
+                            None => &line[first_index..],
+                        };
+                        match s {
+                            "if" => Token::KeywordIf,
+                            "for" => Token::KeywordFor,
+                            "else" => Token::KeywordElse,
+                            _ => Token::Identifier(s.to_owned()),
                         }
-                        Token::Identifier(s)
                     }
                     '0'..='9' | '.' => {
                         enum State {
@@ -96,10 +114,10 @@ impl LineLexer {
                             SciSign(String),
                             Sci(String),
                         }
-                        let mut state = match ch {
+                        let mut state = match first_ch {
                             '.' => State::Dot,
                             '0' => State::Zero,
-                            _ => State::DecInt(ch.into()),
+                            _ => State::DecInt(first_ch.into()),
                         };
                         while let Some(&(_, ch)) = iter.peek() {
                             let append_ch = |mut s: String| {
@@ -138,8 +156,8 @@ impl LineLexer {
                                     | State::Decimal(_)),
                                     '_',
                                 ) => s,
-                                (state_, _) => {
-                                    state = state_;
+                                (final_state, _) => {
+                                    state = final_state;
                                     break;
                                 }
                             };
@@ -185,7 +203,7 @@ impl LineLexer {
                         if iter.next_if(second_is('/')).is_some() {
                             return Ok(());
                         } else if iter.next_if(second_is('*')).is_some() {
-                            self.comment.push(pos::Start::new(line_num, index));
+                            self.comment.push(pos::Start::new(line_num, first_index));
                             continue;
                         } else if iter.next_if(second_is('=')).is_some() {
                             Token::SlashEqual
@@ -289,7 +307,12 @@ impl LineLexer {
                     ']' => Token::ClosingBracket,
                     '{' => Token::OpeningBrace,
                     '}' => Token::ClosingBrace,
-                    _ => return Err(Error::UnexpectedCharacter(pos::Start::new(line_num, index))),
+                    _ => {
+                        return Err(Error::UnexpectedCharacter(pos::Start::new(
+                            line_num,
+                            first_index,
+                        )))
+                    }
                 };
                 tokens.push_back((range_gen(iter.peek()), token));
             }
